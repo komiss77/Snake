@@ -1,0 +1,12 @@
+api-version: 1.14
+name: Snake
+main: ru.ostrov77.snake.Main
+version: 2.0
+depend: [Bsign]
+softdepend: [NoteBlockAPI]
+author: komiss77
+commands:
+   snake:
+      description: Main command
+      usage: /snake [action]
+      aliases: [sn]
