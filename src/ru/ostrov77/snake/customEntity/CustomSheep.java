@@ -1,12 +1,14 @@
 package ru.ostrov77.snake.customEntity;
 
 
-import net.minecraft.server.v1_15_R1.DamageSource;
-import net.minecraft.server.v1_15_R1.EntityHuman;
-import net.minecraft.server.v1_15_R1.EntitySheep;
-import net.minecraft.server.v1_15_R1.EntityTypes;
-import net.minecraft.server.v1_15_R1.EnumHand;
-import org.bukkit.craftbukkit.v1_15_R1.CraftWorld;
+import net.minecraft.server.v1_16_R1.DamageSource;
+import net.minecraft.server.v1_16_R1.EntityHuman;
+import net.minecraft.server.v1_16_R1.EntitySheep;
+import net.minecraft.server.v1_16_R1.EntityTypes;
+import net.minecraft.server.v1_16_R1.EnumHand;
+import net.minecraft.server.v1_16_R1.EnumInteractionResult;
+import net.minecraft.server.v1_16_R1.SoundCategory;
+import org.bukkit.craftbukkit.v1_16_R1.CraftWorld;
 
 
 
@@ -80,7 +82,7 @@ public class CustomSheep extends EntitySheep {
     
     
 @Override
-    public boolean a(final EntityHuman entityhuman, final EnumHand enumhand) {
+    public EnumInteractionResult b(final EntityHuman entityhuman, final EnumHand enumhand) {
        /* final ItemStack itemstack = entityhuman.b(enumhand);
         if (itemstack.getItem() != Items.SHEARS || this.isSheared() || this.isBaby()) {
             return super.a(entityhuman, enumhand);
@@ -94,7 +96,7 @@ public class CustomSheep extends EntitySheep {
         if (!this.world.isClientSide) {
             itemstack.damage(1, entityhuman, entityhuman1 -> entityhuman1.d(enumhand));
         }*/
-        return false;
+         return EnumInteractionResult.FAIL;
     }    
     
     
@@ -102,7 +104,7 @@ public class CustomSheep extends EntitySheep {
     
     
     @Override
-    public void shear() {
+    public void shear(final SoundCategory soundcategory) {
        /* if (!this.world.isClientSide) {
             this.setSheared(true);
             for (int i = 1 + this.random.nextInt(3), j = 0; j < i; ++j) {

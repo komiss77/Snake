@@ -4,20 +4,20 @@ import ru.ostrov77.snake.customEntity.CustomSheep;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-import net.minecraft.server.v1_15_R1.EntityInsentient;
-import net.minecraft.server.v1_15_R1.EnumColor;
-import net.minecraft.server.v1_15_R1.GenericAttributes;
-import net.minecraft.server.v1_15_R1.PathEntity;
+import net.minecraft.server.v1_16_R1.EntityInsentient;
+import net.minecraft.server.v1_16_R1.EnumColor;
+import net.minecraft.server.v1_16_R1.GenericAttributes;
+import net.minecraft.server.v1_16_R1.PathEntity;
 import org.bukkit.Bukkit;
 import org.bukkit.DyeColor;
 import org.bukkit.Effect;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Sound;
-import org.bukkit.craftbukkit.v1_15_R1.CraftWorld;
-import org.bukkit.craftbukkit.v1_15_R1.entity.CraftEntity;
-import org.bukkit.craftbukkit.v1_15_R1.entity.CraftLivingEntity;
-import org.bukkit.craftbukkit.v1_15_R1.entity.CraftSheep;
+import org.bukkit.craftbukkit.v1_16_R1.CraftWorld;
+import org.bukkit.craftbukkit.v1_16_R1.entity.CraftEntity;
+import org.bukkit.craftbukkit.v1_16_R1.entity.CraftLivingEntity;
+import org.bukkit.craftbukkit.v1_16_R1.entity.CraftSheep;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Item;
 import org.bukkit.entity.Player;
@@ -359,7 +359,7 @@ public class Snake {
 
 
                 
-                final net.minecraft.server.v1_15_R1.EntityInsentient nms_insentient = (EntityInsentient) ((CraftEntity)follower).getHandle();
+                final net.minecraft.server.v1_16_R1.EntityInsentient nms_insentient = (EntityInsentient) ((CraftEntity)follower).getHandle();
                 final PathEntity pathEntity = nms_insentient.getNavigation().a(target.getLocation().getX(), target.getLocation().getY(), target.getLocation().getZ(), 1);
                 if (pathEntity != null) {
                     nms_insentient.getNavigation().a(pathEntity, 1.0);

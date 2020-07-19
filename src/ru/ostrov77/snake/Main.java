@@ -2,12 +2,12 @@ package ru.ostrov77.snake;
 
 
 
-import net.minecraft.server.v1_15_R1.Entity;
-import net.minecraft.server.v1_15_R1.EntityTypes;
-import net.minecraft.server.v1_15_R1.EnumCreatureType;
-import net.minecraft.server.v1_15_R1.IRegistry;
-import net.minecraft.server.v1_15_R1.RegistryID;
-import net.minecraft.server.v1_15_R1.RegistryMaterials;
+import net.minecraft.server.v1_16_R1.Entity;
+import net.minecraft.server.v1_16_R1.EntityTypes;
+import net.minecraft.server.v1_16_R1.EnumCreatureType;
+import net.minecraft.server.v1_16_R1.IRegistry;
+import net.minecraft.server.v1_16_R1.RegistryID;
+import net.minecraft.server.v1_16_R1.RegistryMaterials;
 import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
@@ -76,7 +76,7 @@ private static Main instance;
         //   IRegistry.a(IRegistry.ENTITY_TYPE, minecraftKey, entity.a("snake_sheep"));
         
         try {
-            registerCustomEntity(CustomSheep.class, 11);
+            //registerCustomEntity(CustomSheep.class, 11);
         } catch (Exception ex) {
             ex.printStackTrace();
         }
@@ -92,7 +92,7 @@ private static Main instance;
     
     
     
-    
+    /*
 	public void registerCustomEntity(Class<? extends Entity> entityClass, int id) throws Exception {     
 
             final ReflectField<RegistryID<EntityTypes<?>>> REGISTRY_ID_FIELD = new ReflectField<>(RegistryMaterials.class, "b");
@@ -111,7 +111,7 @@ private static Main instance;
 
             // Restore the ID -> EntityTypes mapping.
             idToClassMap[id] = oldValue;
-	}    
+	}  */  
     
     
     
