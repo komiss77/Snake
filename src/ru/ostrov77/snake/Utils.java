@@ -6,7 +6,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.configuration.file.FileConfiguration;
-import ru.komiss77.Managers.WorldManager;
+import ru.komiss77.modules.world.WorldManager;
 
 public class Utils {
 
@@ -19,7 +19,7 @@ public class Utils {
                 final String worldName = astring[0];
                 World world = Bukkit.getServer().getWorld(worldName);
                 
-                if (world==null && WorldManager.load(Bukkit.getConsoleSender(), worldName)) {
+                if (world==null && WorldManager.load(Bukkit.getConsoleSender(), worldName, World.Environment.NORMAL, WorldManager.Generator.Empty)!=null) {
                     Main.log_ok("§eЗагружен мир "+worldName+" для арены ");
                     world=Bukkit.getWorld(worldName);
                }

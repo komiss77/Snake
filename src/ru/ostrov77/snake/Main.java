@@ -2,26 +2,18 @@ package ru.ostrov77.snake;
 
 
 
-import net.minecraft.server.v1_16_R1.Entity;
-import net.minecraft.server.v1_16_R1.EntityTypes;
-import net.minecraft.server.v1_16_R1.EnumCreatureType;
-import net.minecraft.server.v1_16_R1.IRegistry;
-import net.minecraft.server.v1_16_R1.RegistryID;
-import net.minecraft.server.v1_16_R1.RegistryMaterials;
 import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.event.Listener;
 import org.bukkit.plugin.java.JavaPlugin;
 import ru.komiss77.ApiOstrov;
-import ru.komiss77.Enums.UniversalArenaState;
+import ru.komiss77.enums.GameState;
 import ru.ostrov77.snake.Manager.AM;
 import ru.ostrov77.snake.Manager.Commands;
 import ru.ostrov77.snake.Manager.Files;
 import ru.ostrov77.snake.Manager.ScoreBoard;
 import ru.ostrov77.snake.Manager.Shop;
-import ru.ostrov77.snake.customEntity.CustomSheep;
-import ru.ostrov77.snake.customEntity.ReflectField;
 import ru.ostrov77.snake.listener.GuiListener;
 import ru.ostrov77.snake.listener.PlayerListener;
 
@@ -125,15 +117,13 @@ private static Main instance;
             AM.getAllArenas().values().stream().forEach((ar) -> {
                 ApiOstrov.sendArenaData(
                         ar.getName(),
+                        GameState.ВЫКЛЮЧЕНА,
                         "§4█████████",
                         "§2§l§oЗмейка",
                         "§5"+ar.getName(),
                         "§4█████████",
                         "выключена",
-                        0,
-                        UniversalArenaState.ВЫКЛЮЧЕНА,
-                        true, //mysql
-                        false //async
+                        0
                 );
             });
                 
@@ -162,36 +152,32 @@ private static Main instance;
 public static void log_ok(String s) {   Bukkit.getConsoleSender().sendMessage("§fSnake: §2"+ s); }
 public static void log_err(String s) {   Bukkit.getConsoleSender().sendMessage("§fSnake: §c"+ s); }
     
-    public static void sendBsignMysql(final String name, final String line2, final String line3, final UniversalArenaState state, final int players) {
+    public static void sendBsignMysql(final String name, final String line2, final String line3, final GameState state, final int players) {
         ////////////////////////////////////////////////////////////////////////////////
              ApiOstrov.sendArenaData(
                     name,
+                        GameState.РАБОТАЕТ,
                     "§2§l§oЗмейка",
                     "§5"+name,
                     line2,
                     line3,
                     "работает",
-                    players,
-                    UniversalArenaState.РАБОТАЕТ,
-                    true, //mysql
-                    true //async
+                    players
             );
         ////////////////////////////////////////////////////////////////////////////////
 
     }
-    public static void sendBsignChanel(final String name, final String line2, final String line3, final UniversalArenaState state, final int players) {
+    public static void sendBsignChanel(final String name, final String line2, final String line3, final GameState state, final int players) {
         ////////////////////////////////////////////////////////////////////////////////
             ApiOstrov.sendArenaData(
                     name,
+                        GameState.РАБОТАЕТ,
                     "§2§l§oЗмейка",
                     "§5"+name,
                     line2,
                     line3,
                     "работает",
-                    players,
-                    UniversalArenaState.РАБОТАЕТ,
-                    false, //mysql
-                    true //async
+                    players
             );
         ////////////////////////////////////////////////////////////////////////////////
 

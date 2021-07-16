@@ -5,8 +5,8 @@ import org.bukkit.Bukkit;
 import org.bukkit.World;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
-import ru.komiss77.Managers.PM;
-import ru.komiss77.Objects.Oplayer;
+import ru.komiss77.modules.player.Oplayer;
+import ru.komiss77.modules.player.PM;
 import ru.ostrov77.snake.Main;
 import ru.ostrov77.snake.Objects.Arena;
 

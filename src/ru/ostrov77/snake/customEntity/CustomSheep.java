@@ -1,14 +1,16 @@
 package ru.ostrov77.snake.customEntity;
 
+import net.minecraft.world.EnumHand;
+import net.minecraft.world.EnumInteractionResult;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.entity.EntityTypes;
+import net.minecraft.world.entity.animal.EntitySheep;
+import net.minecraft.world.entity.player.EntityHuman;
+import org.bukkit.SoundCategory;
+import org.bukkit.craftbukkit.v1_17_R1.CraftWorld;
 
-import net.minecraft.server.v1_16_R1.DamageSource;
-import net.minecraft.server.v1_16_R1.EntityHuman;
-import net.minecraft.server.v1_16_R1.EntitySheep;
-import net.minecraft.server.v1_16_R1.EntityTypes;
-import net.minecraft.server.v1_16_R1.EnumHand;
-import net.minecraft.server.v1_16_R1.EnumInteractionResult;
-import net.minecraft.server.v1_16_R1.SoundCategory;
-import org.bukkit.craftbukkit.v1_16_R1.CraftWorld;
+
+
 
 
 
@@ -25,7 +27,7 @@ public class CustomSheep extends EntitySheep {
    }*/
    
     public CustomSheep(CraftWorld world) {
-        super(EntityTypes.SHEEP, world.getHandle());
+        super(EntityTypes.ax, world.getHandle());
 
         
         
@@ -96,15 +98,18 @@ public class CustomSheep extends EntitySheep {
         if (!this.world.isClientSide) {
             itemstack.damage(1, entityhuman, entityhuman1 -> entityhuman1.d(enumhand));
         }*/
-         return EnumInteractionResult.FAIL;
+         return EnumInteractionResult.e;
     }    
     
     
     
-    
-    
     @Override
-    public void shear(final SoundCategory soundcategory) {
+    public boolean canShear() {
+        return false;
+    }    
+    
+   // @Override
+   // public void shear(final SoundCategory soundcategory) {
        /* if (!this.world.isClientSide) {
             this.setSheared(true);
             for (int i = 1 + this.random.nextInt(3), j = 0; j < i; ++j) {
@@ -117,7 +122,7 @@ public class CustomSheep extends EntitySheep {
             }
         }
         this.a(SoundEffects.ENTITY_SHEEP_SHEAR, 1.0f, 1.0f);*/
-    }    
+   // }    
     
     
     

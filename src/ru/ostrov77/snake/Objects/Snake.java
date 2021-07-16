@@ -1,23 +1,28 @@
 package ru.ostrov77.snake.Objects;
 
+import java.lang.reflect.Field;
 import ru.ostrov77.snake.customEntity.CustomSheep;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-import net.minecraft.server.v1_16_R1.EntityInsentient;
-import net.minecraft.server.v1_16_R1.EnumColor;
-import net.minecraft.server.v1_16_R1.GenericAttributes;
-import net.minecraft.server.v1_16_R1.PathEntity;
+import net.minecraft.world.entity.EntityInsentient;
+import net.minecraft.world.entity.EntityLiving;
+import net.minecraft.world.entity.ai.attributes.GenericAttributes;
+import net.minecraft.world.entity.animal.EntitySheep;
+import net.minecraft.world.item.EnumColor;
+import net.minecraft.world.level.pathfinder.PathEntity;
+
 import org.bukkit.Bukkit;
 import org.bukkit.DyeColor;
 import org.bukkit.Effect;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Sound;
-import org.bukkit.craftbukkit.v1_16_R1.CraftWorld;
-import org.bukkit.craftbukkit.v1_16_R1.entity.CraftEntity;
-import org.bukkit.craftbukkit.v1_16_R1.entity.CraftLivingEntity;
-import org.bukkit.craftbukkit.v1_16_R1.entity.CraftSheep;
+import org.bukkit.craftbukkit.v1_17_R1.CraftWorld;
+import org.bukkit.craftbukkit.v1_17_R1.entity.CraftEntity;
+import org.bukkit.craftbukkit.v1_17_R1.entity.CraftLivingEntity;
+import org.bukkit.craftbukkit.v1_17_R1.entity.CraftSheep;
+
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Item;
 import org.bukkit.entity.Player;
@@ -275,10 +280,12 @@ public class Snake {
                 sheep.getWorld().playEffect(sheep.getLocation(), Effect.GHAST_SHOOT, 0);
                 
                 Item item = sheep.getLocation().getWorld().dropItem(sheep.getLocation(), new ItemStack(Material.GOLD_INGOT, 1) ); 
-                item.setCustomName(UUID.randomUUID().toString());
-                item.setCustomNameVisible(false);
+                //item.setCustomName(UUID.randomUUID().toString());
+                //item.setCustomNameVisible(false);
                 item.setVelocity(new Vector(0, 1, 0));
                 item.setPickupDelay(1);
+                item.setGlowing(true);
+                //item.set
                 
                 //sheep.getLocation().getWorld().dropItemNaturally(sheep.getLocation(),new ItemStack(Material.GOLD_INGOT, 1) );
                 try { 
@@ -359,7 +366,7 @@ public class Snake {
 
 
                 
-                final net.minecraft.server.v1_16_R1.EntityInsentient nms_insentient = (EntityInsentient) ((CraftEntity)follower).getHandle();
+                final net.minecraft.world.entity.EntityInsentient nms_insentient = (EntityInsentient) ((CraftEntity)follower).getHandle();
                 final PathEntity pathEntity = nms_insentient.getNavigation().a(target.getLocation().getX(), target.getLocation().getY(), target.getLocation().getZ(), 1);
                 if (pathEntity != null) {
                     nms_insentient.getNavigation().a(pathEntity, 1.0);
@@ -384,20 +391,34 @@ public class Snake {
                 double2 = speed - double3;
                 speed = double2;
                 if (double2 < 0.1D)   speed = 0.2D;
-                nms_insentient.getAttributeInstance(GenericAttributes.MOVEMENT_SPEED).setValue((double)speed);   
+                nms_insentient.getAttributeInstance(GenericAttributes.a).setValue((double)speed);   //MOVEMENT_SPEED
                 
                 
             }
         }).runTaskTimer(Main.getInstance(), 0L, 2L);
     }
 
-
-    
+/*
+    NoSuchFieldException: ay
+[13:13:30] [Server thread/WARN]: 	at java.base/java.lang.Class.getDeclaredField(Class.java:2549)
+[13:13:30] [Server thread/WARN]: 	at ru.ostrov77.snake.Objects.Snake.Set_yaw(Snake.java:405)
+*/
     public static void Set_yaw(Entity entity, Player player) {
-        ((CraftSheep) entity).getHandle().yaw = player.getLocation().getYaw();
+        //((CraftSheep) entity).getHandle().ay = player.getLocation().getYaw(); //yaw
+        EntitySheep es = ((CraftSheep) entity).getHandle();
+        //EntityLiving es = ((CraftSheep) entity).getHandle();
+        //es.get
+        es.setPositionRotation(entity.getLocation().getX(), entity.getLocation().getY(), entity.getLocation().getZ(), player.getLocation().getYaw(), player.getLocation().getPitch());
+      /*  try {
+            Field field = es.getClass().getDeclaredField("ay");
+            field.setAccessible(true);
+            field.set(es, player.getLocation().getYaw());
+            field.setAccessible(false);
+        } catch (NoSuchFieldException | SecurityException | IllegalAccessException ex) {
+            ex.printStackTrace();
+        }*/
     }
-
-    
+  
     
     private Entity spawnShepp(final Location location, final DyeColor color, final float yaw) {
         final CraftWorld mcWorld = (CraftWorld) location.getWorld();

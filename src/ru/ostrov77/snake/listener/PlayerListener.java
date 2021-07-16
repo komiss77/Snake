@@ -23,6 +23,7 @@ import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityPickupItemEvent;
 import org.bukkit.event.entity.FoodLevelChangeEvent;
+import org.bukkit.event.entity.ItemMergeEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.inventory.InventoryOpenEvent;
 import org.bukkit.event.player.PlayerArmorStandManipulateEvent;
@@ -38,15 +39,17 @@ import org.bukkit.event.world.StructureGrowEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.scheduler.BukkitRunnable;
 import ru.komiss77.ApiOstrov;
-import ru.komiss77.Enums.Data;
-import ru.komiss77.Events.BsignLocalArenaClick;
-import ru.komiss77.Events.BungeeStatRecieved;
-import ru.komiss77.Events.FriendTeleportEvent;
-import ru.komiss77.Managers.PM;
+
 import ru.komiss77.Ostrov;
+import ru.komiss77.enums.Data;
+import ru.komiss77.events.BsignLocalArenaClick;
+import ru.komiss77.events.BungeeDataRecieved;
+import ru.komiss77.events.FriendTeleportEvent;
+import ru.komiss77.modules.player.PM;
 import ru.ostrov77.snake.Main;
 import ru.ostrov77.snake.Manager.AM;
 import ru.ostrov77.snake.Manager.Files;
+import ru.ostrov77.snake.Objects.Arena;
 import ru.ostrov77.snake.Objects.GameState;
 
 
@@ -56,7 +59,16 @@ public class PlayerListener implements Listener {
 
     
     
-    
+    @EventHandler (ignoreCancelled = true, priority = EventPriority.HIGH)
+    public void onItemMerge (final ItemMergeEvent e) {
+        Arena a = AM.getArenaByWorld(e.getEntity().getWorld().getName());
+        if (a!=null) {
+//System.out.println(" ---- onItemMerge --- "+e.getEntity().getItemStack());
+            if (a.getState()!=GameState.WAITING) e.setCancelled(true);
+        }
+        
+        
+    }    
     
     
     @EventHandler (ignoreCancelled = true, priority = EventPriority.MONITOR)
@@ -67,8 +79,8 @@ public class PlayerListener implements Listener {
     }
     
     @EventHandler(priority = EventPriority.MONITOR)
-    public void onBungeeStatRecieved(final BungeeStatRecieved e) {  
-        final String wantToArena = e.getOplayer().getBungeeData(Data.WANT_ARENA_JOIN);
+    public void onBungeeStatRecieved(final BungeeDataRecieved e) {  
+        final String wantToArena = e.getOplayer().getDataString(Data.WANT_ARENA_JOIN);
         if (wantToArena.isEmpty() || wantToArena.equals("any")) return;
          AM.addPlayer( e.getPlayer(), wantToArena);
     }    

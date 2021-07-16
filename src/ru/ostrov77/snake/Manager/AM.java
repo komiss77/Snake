@@ -8,7 +8,7 @@ import java.util.Map.Entry;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.bukkit.util.Vector;
-import ru.komiss77.Enums.UniversalArenaState;
+import ru.komiss77.enums.GameState;
 import ru.ostrov77.snake.Main;
 
 import ru.ostrov77.snake.Objects.Arena;
@@ -76,7 +76,7 @@ public static void LoadArena(List spawns, String name, Location arenaLobby, Loca
 //System.out.println("Load: "+name+" spawns:"+spawns +" arenaLobby:"+arenaLobby+" boundsLow:"+boundsLow+" boundsHigh:"+boundsHigh+" minPlayers:"+minPlayers);  
     Arena arena = new Arena( spawns, name, arenaLobby,  boundsLow, boundsHigh, minPlayers );
         arenas.put(name,arena);
-        Main.sendBsignMysql(name, arena.getStateAsString(), "", UniversalArenaState.ОЖИДАНИЕ, 0);
+        Main.sendBsignMysql(name, arena.getStateAsString(), "", GameState.ОЖИДАНИЕ, 0);
       }
 /*    
 public AM reloadArena( List spawns, String name ) {
@@ -109,8 +109,8 @@ public static void startArenaByName(String s) {
 
 public static Arena getArenaByWorld(String w) {
     
-    for (Entry <String, Arena> e : arenas.entrySet()) {
-        if ( e.getValue().getArenaLobby().getWorld().getName().equals(w)) return e.getValue();
+    for ( Arena a : arenas.values()) {
+        if ( a.getArenaLobby().getWorld().getName().equals(w)) return a;
         
     }
       return null;

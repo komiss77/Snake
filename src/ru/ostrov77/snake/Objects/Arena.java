@@ -29,9 +29,9 @@ import com.xxmicloxx.NoteBlockAPI.NBSDecoder;
 import com.xxmicloxx.NoteBlockAPI.RadioSongPlayer;
 import com.xxmicloxx.NoteBlockAPI.Song;
 import org.bukkit.DyeColor;
+import org.bukkit.entity.EntityType;
 import ru.komiss77.ApiOstrov;
-import ru.komiss77.Enums.UniversalArenaState;
-import ru.komiss77.ProfileMenu.E_Stat;
+import ru.komiss77.enums.Stat;
 import ru.komiss77.utils.ColorUtils;
 
 import ru.ostrov77.snake.listener.GuiListener;
@@ -125,7 +125,7 @@ public class Arena {
 
                     } else if (cdCounter > 0) {
                             --cdCounter;
-                            Main.sendBsignChanel(name, "§6Игроки: §2"+ arenaLobby.getWorld().getPlayers().size(), getStateAsString()+" §4"+cdCounter, UniversalArenaState.СТАРТ, arenaLobby.getWorld().getPlayers().size());
+                            Main.sendBsignChanel(name, "§6Игроки: §2"+ arenaLobby.getWorld().getPlayers().size(), getStateAsString()+" §4"+cdCounter, ru.komiss77.enums.GameState.СТАРТ, arenaLobby.getWorld().getPlayers().size());
                             SendAB("§eДо старта: §f"+cdCounter);
                             if (cdCounter <= 5 && cdCounter > 0) {
                                 SendTitle("§b"+cdCounter+" !", "");
@@ -237,7 +237,7 @@ public class Arena {
 
                     Arena.this.playtime++;
                     //SignsListener.updateSigns( getName(), 1, players.size(), getStateAsString(), playtime );
-                    Main.sendBsignChanel(name, getStateAsString(), "§6Игроки: §2"+ players.size(), UniversalArenaState.ИГРА, arenaLobby.getWorld().getPlayers().size()); 
+                    Main.sendBsignChanel(name, getStateAsString(), "§6Игроки: §2"+ players.size(), ru.komiss77.enums.GameState.ИГРА, arenaLobby.getWorld().getPlayers().size()); 
                 }
             }).runTaskTimer(Main.getInstance(), 0L, 20L);
 
@@ -254,12 +254,12 @@ public class Arena {
         if (GameTimer != null)  GameTimer.cancel();
 
         //SignsListener.updateSigns( getName(), 1, maxplayers, getStateAsString(), playtime );
-        Main.sendBsignChanel(getName(), "§1 - / -", getStateAsString(), UniversalArenaState.ФИНИШ, arenaLobby.getWorld().getPlayers().size());
+        Main.sendBsignChanel(getName(), "§1 - / -", getStateAsString(), ru.komiss77.enums.GameState.ФИНИШ, arenaLobby.getWorld().getPlayers().size());
 
         try {
             final String winner_name = playerTracker.entrySet().iterator().next().getKey();
             final Player winner = playerTracker.get(winner_name).p;
-            ApiOstrov.sendTitleDirect(winner, "§aВы победили!", "§fСобирайте золото, это Ваша награда!",5,20,5);
+            winner.sendTitle( "§aВы победили!", "§fСобирайте золото, это Ваша награда!",5,20,5);
             winner.playSound(winner.getLocation(), Sound.BLOCK_ANVIL_FALL , 1.0F, 1.0F);
             playerTracker.get(winner_name).terminate();
 
@@ -282,10 +282,10 @@ public class Arena {
                     if (ending == 5) {
                         winner.sendMessage("§fСлитков собрано: §b"+pickupGold+" §f!" );
                         //winner.sendMessage("§fВы получаете на счёт §6"+pickupGold*10+" §fр.!" );
-                        ApiOstrov.addIntStat(winner, E_Stat.SN_game);
-                        ApiOstrov.addIntStat(winner, E_Stat.SN_win);
+                        ApiOstrov.addStat(winner, Stat.SN_game);
+                        ApiOstrov.addStat(winner, Stat.SN_win);
                         for (int g=0; g<pickupGold;g++) {
-                            ApiOstrov.addIntStat(winner, E_Stat.SN_gold);
+                            ApiOstrov.addStat(winner, Stat.SN_gold);
                         }
                         ApiOstrov.moneyChange(winner, pickupGold*10, "Змейка, собрано слитков: "+pickupGold);
                         firework(winner);
@@ -332,7 +332,10 @@ public class Arena {
         arenaLobby.getWorld().getPlayers().stream().forEach((p) -> { p.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, 10, 1), true); });
         //this.arenaLobby.getWorld().getPlayers().stream().forEach((p) -> { p.teleport(Bukkit.getServer().getWorlds().get(0).getSpawnLocation()); });
         arenaLobby.getWorld().getPlayers().stream().forEach((p) -> { PlayerExit(p); });
-        arenaLobby.getWorld().getEntities().stream().forEach((e) -> {  try {e.remove();} catch (NullPointerException ex) {}     });
+        arenaLobby.getWorld().getEntities().stream().forEach( (e) -> { 
+            if (e.getType()!=EntityType.PLAYER) e.remove();   
+        }
+        );
 
         sugars.clear();
         playerTracker.clear();
@@ -349,7 +352,7 @@ public class Arena {
         setState(GameState.WAITING);
         canreset=true;
         StopMusic();
-        Main.sendBsignMysql(name, getStateAsString(), "", UniversalArenaState.ОЖИДАНИЕ, 0);
+        Main.sendBsignMysql(name, getStateAsString(), "", ru.komiss77.enums.GameState.ОЖИДАНИЕ, 0);
     }
 
     
@@ -456,7 +459,7 @@ public class Arena {
             //GuiListener.givePlayerNametag(p);
             p.updateInventory();
             //SignsListener.updateSigns(name, players.size(), maxplayers, getStateAsString(), playtime );
-            Main.sendBsignChanel(name, "§2"+ arenaLobby.getWorld().getPlayers().size(), getStateAsString(), UniversalArenaState.ОЖИДАНИЕ, arenaLobby.getWorld().getPlayers().size());
+            Main.sendBsignChanel(name, "§2"+ arenaLobby.getWorld().getPlayers().size(), getStateAsString(), ru.komiss77.enums.GameState.ОЖИДАНИЕ, arenaLobby.getWorld().getPlayers().size());
             if ( players.size()>=minPlayers ) startCountdown();
            } 
 
@@ -479,7 +482,7 @@ public class Arena {
             //Utils.sendActionBar(p, "§fВы вышли с арены!");
             p.teleport(Bukkit.getServer().getWorlds().get(0).getSpawnLocation());
             //SignsListener.updateSigns( getName(), players.size(), maxplayers, getStateAsString(), playtime );
-            Main.sendBsignChanel(name, "§2"+ arenaLobby.getWorld().getPlayers().size(), getStateAsString(), UniversalArenaState.ОЖИДАНИЕ, arenaLobby.getWorld().getPlayers().size());
+            Main.sendBsignChanel(name, "§2"+ arenaLobby.getWorld().getPlayers().size(), getStateAsString(), ru.komiss77.enums.GameState.ОЖИДАНИЕ, arenaLobby.getWorld().getPlayers().size());
         
         } else {                //если игра
         
@@ -487,7 +490,7 @@ public class Arena {
                 playerTracker.get(p.getName()).terminate();
                 playerTracker.remove(p.getName());
                 //SignsListener.updateSigns( getName(), playerTracker.size(), maxplayers, getStateAsString(), playtime );
-                Main.sendBsignChanel(name, "§2"+ arenaLobby.getWorld().getPlayers().size(), getStateAsString(), UniversalArenaState.ПЕРЕЗАПУСК, arenaLobby.getWorld().getPlayers().size());
+                Main.sendBsignChanel(name, "§2"+ arenaLobby.getWorld().getPlayers().size(), getStateAsString(), ru.komiss77.enums.GameState.ПЕРЕЗАПУСК, arenaLobby.getWorld().getPlayers().size());
                 if ( playerTracker.size() ==1 ) endGame();   
             } 
             if ( players.contains(p.getName()) ) players.remove(p.getName());
@@ -513,8 +516,8 @@ public class Arena {
         p.getWorld().playSound(p.getLocation(), Sound.ENTITY_DONKEY_ANGRY , 0.8f, 2.0f);
         ApiOstrov.sendTitle(p, "", "§4Вы проиграли!");
         p.teleport(arenaLobby);
-        ApiOstrov.addIntStat(p, E_Stat.SN_game);
-        ApiOstrov.addIntStat(p, E_Stat.SN_loose);
+        ApiOstrov.addStat(p, Stat.SN_game);
+        ApiOstrov.addStat(p, Stat.SN_loose);
         p.getInventory().clear();
         p.getInventory().setItem(8, GuiListener.exitGame);
         p.updateInventory();
@@ -776,7 +779,7 @@ public class Arena {
 
     public void SendTitle(final String t, final String st) {
         arenaLobby.getWorld().getPlayers().stream().forEach((p) -> {
-            ApiOstrov.sendTitleDirect(p, t, st, 5, 20, 5);
+            p.sendTitle( t, st, 5, 20, 5);
         });
     }
     
