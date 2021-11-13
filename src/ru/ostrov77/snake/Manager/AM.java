@@ -12,6 +12,7 @@ import ru.komiss77.enums.GameState;
 import ru.ostrov77.snake.Main;
 
 import ru.ostrov77.snake.Objects.Arena;
+import ru.ostrov77.snake.Objects.Snake;
 
 
 
@@ -244,6 +245,16 @@ public static boolean isInside(Location location, Vector vector, Vector vector1)
     public static void setBoundsLow(Location location, String s) {
         Arena arena = getArena(s);
         if (arena != null)   arena.setBoundsLow(location);
+    }
+
+    public static Snake getSnake(final Player p) {
+        for (Arena a : arenas.values()) {
+            if (a.getState()==ru.ostrov77.snake.Objects.GameState.INGAME && a.playerTracker.containsKey(p.getName())) {
+                return a.playerTracker.get(p.getName());
+            }
+        }
+        return null;
+        //return arenas.entrySet().stream().anyMatch( (e) -> (e.getValue().IsInThisGame(p)));
     }
 
 

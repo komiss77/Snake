@@ -1,16 +1,7 @@
 package ru.ostrov77.snake.Objects;
 
-import java.lang.reflect.Field;
-import ru.ostrov77.snake.customEntity.CustomSheep;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
-import net.minecraft.world.entity.EntityInsentient;
-import net.minecraft.world.entity.EntityLiving;
-import net.minecraft.world.entity.ai.attributes.GenericAttributes;
-import net.minecraft.world.entity.animal.EntitySheep;
-import net.minecraft.world.item.EnumColor;
-import net.minecraft.world.level.pathfinder.PathEntity;
 
 import org.bukkit.Bukkit;
 import org.bukkit.DyeColor;
@@ -18,74 +9,377 @@ import org.bukkit.Effect;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Sound;
-import org.bukkit.craftbukkit.v1_17_R1.CraftWorld;
-import org.bukkit.craftbukkit.v1_17_R1.entity.CraftEntity;
-import org.bukkit.craftbukkit.v1_17_R1.entity.CraftLivingEntity;
-import org.bukkit.craftbukkit.v1_17_R1.entity.CraftSheep;
+import org.bukkit.attribute.Attribute;
 
 import org.bukkit.entity.Entity;
+import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Item;
+import org.bukkit.entity.LivingEntity;
+import org.bukkit.entity.Mob;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Sheep;
-import org.bukkit.event.entity.CreatureSpawnEvent;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
+import org.bukkit.util.BoundingBox;
 import org.bukkit.util.Vector;
-import ru.ostrov77.snake.Main;
+import ru.komiss77.Ostrov;
 import ru.ostrov77.snake.Manager.Files;
+import ru.ostrov77.snake.Manager.FollowGoal;
 
 
 
-public class Snake {
+public class Snake implements Runnable {
 
-    Arena a;
-    public Player p;
-    private Player collided = null;
-    private BukkitTask sheepspawn,collisioncheck,sheepcontrol,lostsheep,blockdismount;
+    private int tick = 1; //или все % сработаюи на 0
+    public final Arena arena;
+    public String name;
+    private String collided;
+    
+    private BukkitTask task;
     
     private final List <Entity> playerSheep = new ArrayList<>();
+    private final Entity masterSheep;
     
-    private double speedMultipler = 1.0D; 
-    private DyeColor color;
-    private int speedBoost,kills,tp = 0;
-    private boolean sugarBoosted = false;
+    private final DyeColor color;
+    public int kills;
+    public int speedBoost;
+    public double speed = Files.snakeDefaultSpeed;//1.0D;  //скорость овцы по умолчанию 0,23
+    public boolean sugarBoosted = false;
 
     
     
-    public Snake(Player player, DyeColor color, Arena arena) {
-        this.p = player;
-        this.a = arena;
+    public Snake(Player p, DyeColor color, Arena arena) {
+        name = p.getName();
+        this.arena = arena;
         this.color = color;
         
         
-        Entity masterSheep = spawnShepp(p.getLocation(), color, p.getLocation().getYaw());
+        masterSheep = spawnShepp(p.getLocation(), color, p.getLocation().getYaw());
 
         if (masterSheep != null && masterSheep.isValid()) {
-            //masterSheep.setPassenger(player);
-            //if (!masterSheep.getPassengers().contains(player)) masterSheep.addPassenger(player);
-            masterSheep.addPassenger(player);
+            
+            masterSheep.addPassenger(p);
             ((Sheep) masterSheep).setColor(color);
             playerSheep.add(masterSheep);       //добавляем первой первую овцу
-            
-            BlockDismount();
-            SheepSpawn();
-            CollisionCheck();
-            LostSheep();
-            SheepControl();
+            task = Bukkit.getScheduler().runTaskTimer(Ostrov.instance, this, 1, 1);
             
         } else {
+            
             Bukkit.getLogger().info("Unable to spawn first sheep...");
             Bukkit.getLogger().info("The problem is most likely because you have animals disabled, especially if you\'re running Multiverse.");
+            
         }
 
     }
     
-   
     
+    
+    
+    @Override
+    public void run() {
+        final Player p = Bukkit.getPlayerExact(name);
+//System.out.println("run name="+name+" p="+p+" arena="+arena+" state="+arena.getState());        
+        if (p==null || !p.isOnline()) {
+            this.cancel();
+            return;
+        }
+      
+        if (arena==null || (arena.getState() != GameState.INGAME && arena.getState() != GameState.STARTED)) {
+            this.cancel();
+            return;
+        }
+        
+        
+        //поиск столкновений
+        if (tick>60 && tick%2==0 && collided==null && arena.getState() == GameState.INGAME) {
+            Entity sheep;
+            BoundingBox box = p.getBoundingBox();//.expand(0.3, 0.3, 0.3);
+            for (Snake snake: arena.playerTracker.values()) {            //перебираем змейки арены
+                if (collided!=null) break; //обработка одного столкновения за тик!
+                for ( int i=0; i<snake.playerSheep.size(); i++ ) {    
+                    if (i<4 && snake.name.equals(name)) continue; //4 своих следующих овцы не учитывать
+                    sheep = snake.playerSheep.get(i);
+
+                    if (  box.overlaps(sheep.getBoundingBox()) ) { //если этот игрок в одном блоке с овцой
+                        if (!snake.name.equals(name)) { //столкнулся НЕ со своими - начисляем вынос
+                            kills++;
+                        }
+                        collided = snake.name;
+                        break;
+                    }
+                }
+            }
+
+            if ( collided != null ) { //игрок столкнулся с овцой
+                arena.Collide(p, collided);
+                collided = null; //сброс для следующего
+                return; //пропустить действия ниже!
+            }
+
+        }
+        
+        
+        //не давать спешиться
+        if (tick%10==0) {
+            if (masterSheep.getPassengers().isEmpty() ) {
+                masterSheep.addPassenger(p);
+                //p.sendMessage("Вы не можете спешиться!");
+            }
+        }
+        
+        
+        
+        
+        //управление мастер-овцой
+        if (arena.getState() == GameState.INGAME) {
+            
+            //Location location = masterSheep.getLocation();
+            //location.setDirection(p.getLocation().getDirection());
+            //location.setPitch(0.0F);
+            //((Mob)masterSheep).setRotation(p.getLocation().getYaw(), p.getLocation().getPitch());
+            ((Mob)masterSheep).setRotation(p.getLocation().getYaw(), 0);
+
+            if (speedBoost > 0) {
+                if (sugarBoosted)  {
+                    setSpeed(Files.snakeSugerBoostedSpeed);
+                } else {
+                    setSpeed(Files.snakeSugerBoostedSpeed);
+                }
+                --speedBoost;
+                if (speedBoost==0) {
+                    setSpeed(Files.snakeDefaultSpeed);
+                    sugarBoosted = false;
+                }
+            }// else {
+            //    speedMultipler = Files.snakeDefaultSpeed;
+            //    sugarBoosted = false;
+            //}
+
+            Vector vector = masterSheep.getLocation().getDirection().multiply(speed);
+            vector.setY(0);
+            //Set_yaw(masterSheep, p);
+            //((Mob)masterSheep).lookAt();
+//System.out.println("setVelocity "+vector.multiply(speedMultipler));
+            masterSheep.setVelocity(vector.multiply(speed));
+            
+        }
+        
+        
+//if (playerSheep.size()>=2) { tick++; return; } //отладка
 
 
-    private void BlockDismount() {                                  //спавнит овец
+        if (tick>50 && tick%40==0 && arena.getState() == GameState.INGAME ) { //SheepSpawn
+            Entity last = playerSheep.get(playerSheep.size()-1);
+            Entity sheep = spawnShepp(last.getLocation(), color, last.getLocation().getYaw());
+//Main.nmsAccess.pathfind(playerSheep.get(playerSheep.size()-1), sheep, p, a);
+            Mob mob = (Mob) sheep;
+            
+            Bukkit.getMobGoals().removeAllGoals(((Sheep)sheep));
+            FollowGoal goal = new FollowGoal(mob, (LivingEntity) last);
+            //if (!Bukkit.getMobGoals().hasGoal(((Sheep)sheep), goal.getKey())) {
+                Bukkit.getMobGoals().addGoal((Sheep)sheep, 1, goal);
+            //}
+
+            playerSheep.add(sheep);
+//Bukkit.broadcastMessage("SPEED_ORIG="+((LivingEntity)sheep).getAttribute(Attribute.GENERIC_MOVEMENT_SPEED).getBaseValue()  );
+
+            setSpeed(speed);
+            //Double double1 = 60.0D;
+            //Double double2 = 0.0D;
+            //Double double3 = 0.0D;
+            //double3 = speed * (double1 / 100.0D);
+            //double2 = speed - double3;
+            //speed = double2;
+            //Double double1 = 60.0D;
+            //Double double2 = 0.0D;
+            //Double double3 = 0.0D;
+            //double3 = speed * (double1 / 100.0D);
+            //double2 = speed - double3;
+            //speed = speed - (speed * (60.0D / 100.0D));
+            //if (speed < 0.1D) speed = 0.2D;
+            //((LivingEntity)sheep).getAttribute(Attribute.GENERIC_MOVEMENT_SPEED).setBaseValue(speed);
+            //((LivingEntity)sheep).getAttribute(Attribute.GENERIC_FOLLOW_RANGE).setBaseValue();
+            //Pathfind(last, sheep, p, arena);
+        }        
+        
+        
+
+
+        
+        tick++;
+        
+    }    
+
+    
+    private void setSpeed(final double newSpeed) {
+        speed = newSpeed;
+        
+        Double double1 = 60.0D;
+        Double double2 = 0.0D;
+        Double double3 = 0.0D;
+        double3 = speed * (double1 / 100.0D);
+        double2 = speed - double3;
+        //speed = double2;
+            //Double double1 = 60.0D;
+            //Double double2 = 0.0D;
+            //Double double3 = 0.0D;
+            //double3 = speed * (double1 / 100.0D);
+            //double2 = speed - double3;
+            //speed = speed - (speed * (60.0D / 100.0D));
+        if (double2 < 0.1D) double2 = 0.2D;
+        
+        double2 = speed;
+                
+//Bukkit.broadcastMessage("setSpeed="+double2 );
+        for (Entity sheep : playerSheep) {
+            ((LivingEntity)sheep).getAttribute(Attribute.GENERIC_MOVEMENT_SPEED).setBaseValue(double2);
+        }
+    }    
+
+    
+    
+    private Entity spawnShepp(final Location spawnLoc, final DyeColor color, final float yaw) {
+        
+        Entity sheep = spawnLoc.getWorld().spawnEntity(spawnLoc, EntityType.SHEEP);
+        ((Sheep)sheep).setColor(color);
+        ((LivingEntity)sheep).setRemoveWhenFarAway(false);
+        
+        //final CraftWorld mcWorld = (CraftWorld) location.getWorld();
+        //final CustomSheep custom_sheep = new CustomSheep (mcWorld);
+
+       // custom_sheep.setLocation(location.getX(), location.getY(), location.getZ(), yaw, location.getPitch());
+        //((CraftLivingEntity) custom_sheep.getBukkitEntity()).setRemoveWhenFarAway(false);
+        //custom_sheep.setColor(numToEcc(color));
+        //custom_sheep.setColor(EnumColor.valueOf(color.toString()));
+        
+        //mcWorld.addEntity(custom_sheep, CreatureSpawnEvent.SpawnReason.CUSTOM);
+        
+       // return custom_sheep.getBukkitEntity();
+       return sheep;
+    }    
+    
+    
+    
+    
+    
+/*
+    
+    public void Pathfind(final Entity target, final Entity follower, final Player owner, final Arena minigame) {
+        
+        //((LivingEntity)follower).setLeashHolder(target);
+        //((LivingEntity)follower).setAI(false);
+        //((LivingEntity)follower).setRotation(0, 0);
+        
+        
+        //(new BukkitRunnable() {
+         //   @Override
+         //   public void run() {
+         //       if (!minigame.hasStarted())   this.cancel();
+         //       if (!target.isValid())   this.cancel();
+
+                Mob mob = (Mob) follower;
+                
+                //mob.getBoundingBox().
+                mob.getPathfinder().moveTo((LivingEntity) target);
+                mob.lookAt(target);
+                
+                //EntitySheep nms_target = (EntitySheep) ((CraftEntity)target).getHandle();
+                
+                //final net.minecraft.world.entity.EntityInsentient nms_follower = (EntityInsentient) ((CraftEntity)follower).getHandle();
+                //final PathEntity pathEntity = nms_insentient.getNavigation().a(target.getLocation().getX(), target.getLocation().getY(), target.getLocation().getZ(), 1);
+                
+                //nms_sheep.targetSelector.a(0, new PathfinderGoalNearestAttackableTarget<EntityHuman>(nmsCow, EntityHuman.class, false));
+                //nms_follower.bP.b(PathfinderGoal.Type.a);
+                //final PathEntity pathEntity = nms_follower.getNavigation().getPath();//a(target.getLocation().getX(), target.getLocation().getY(), target.getLocation().getZ(), 1);
+                //if (pathEntity != null) {
+                //    nms_follower.getNavigation().a(pathEntity, 1.0);
+                //    nms_follower.getNavigation().a(2.0);
+                //}
+                
+                //follower.getLocation().setDirection(target.getLocation().getDirection());
+
+                Double double1 = 60.0D;
+                Double double2 = 0.0D;
+                Double double3 = 0.0D;
+                
+                Double speed = Files.snakeDefaultSpeed;
+                if (speedBoost>0) { //if (minigame.HasSpeedBoost(owner)) {
+                    if (sugarBoosted) { //if (minigame.HasSugarBoosted(owner)) {
+                        speed = Files.snakeSugerBoostedSpeed;
+                    } else {
+                        speed = Files.snakeBoostedSpeed;
+                    }
+                }
+                double3 = speed * (double1 / 100.0D);
+                double2 = speed - double3;
+                speed = double2;
+                if (double2 < 0.1D)   speed = 0.2D;
+                //nms_follower.getAttributeInstance(GenericAttributes.a).setValue((double)speed);   //MOVEMENT_SPEED
+                
+    }*/
+
+
+
+
+
+
+
+
+    
+    public void cancel() {
+        if (task!=null) {
+            task.cancel();
+            task = null;
+            
+            for (Entity sheep : playerSheep) {
+                if (sheep==null || sheep.isDead()) continue;
+            
+                if (!sheep.getPassengers().isEmpty()) {
+                    for (Entity pass : sheep.getPassengers()) {
+                        sheep.removePassenger(pass);
+                        sheep.getWorld().playSound(sheep.getLocation(), Sound.ENTITY_GHAST_SHOOT , 0.8f, 2.0f); //скорее всего это будет первая, чтобы не брать игрока
+                    }
+                }
+                //sheep.getWorld().playEffect(sheep.getLocation(), Effect.EXPLOSION_LARGE, 0);
+                sheep.getWorld().playEffect(sheep.getLocation(), Effect.GHAST_SHOOT, 0);
+                
+                Item item = sheep.getLocation().getWorld().dropItem(sheep.getLocation(), new ItemStack(Material.GOLD_INGOT, 1) ); 
+                //item.setCustomNameVisible(false);
+                item.setVelocity(new Vector(0, 1, 0));
+                item.setPickupDelay(1);
+                item.setGlowing(true);
+                
+                sheep.remove();
+            }
+            
+        
+
+        playerSheep.clear();
+
+        kills = 0;
+        //arena = null;
+        
+        }
+        
+    }   
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    /* private void BlockDismount() {                                  //спавнит овец
         blockdismount = (new BukkitRunnable() {
         @Override
         public void run() {
@@ -133,12 +427,12 @@ public class Snake {
     
     }
 
+*/
 
 
 
 
-
-    private void CollisionCheck() {
+  /*  private void CollisionCheck() {
         this.collisioncheck = (new BukkitRunnable() {
         @Override
         public void run() {
@@ -155,8 +449,8 @@ public class Snake {
                             if (collided!=null) break;
 
 
-                                if ( (short) (Math.pow( (short) playerSheep.get(i).getLocation().getX()-(short)check.getLocation().getX(), 2) 
-                                                + Math.pow((short) playerSheep.get(i).getLocation().getZ()-(short) check.getLocation().getZ(), 2)) <3 ) {
+                                if (  (Math.pow(  playerSheep.get(i).getLocation().getX()-check.getLocation().getX(), 2) 
+                                                + Math.pow( playerSheep.get(i).getLocation().getZ()- check.getLocation().getZ(), 2)) <3 ) {
 
 
                                     if ( p == check ) {       //если это овца хозяина
@@ -185,7 +479,7 @@ public class Snake {
 
                 }}).runTaskTimer(Main.getInstance(), 60L, 7L);
 
-        }
+        }*/
     
 
 
@@ -194,7 +488,7 @@ public class Snake {
 
 
     
-    private void SheepControl() {
+  /*  private void SheepControl() {
         sheepcontrol = (new BukkitRunnable() {
         @Override
         public void run() {
@@ -228,7 +522,6 @@ public class Snake {
         
     }
 
-
     private void LostSheep() {
         this.lostsheep = (new BukkitRunnable() {
         @Override
@@ -236,8 +529,8 @@ public class Snake {
                         
             if ( tp > playerSheep.size()-2 ) tp=0;
 
-            if ( (short) (Math.pow( (short) playerSheep.get(tp).getLocation().getX()-(short) playerSheep.get(tp+1).getLocation().getX(), 2) 
-                            + Math.pow((short) playerSheep.get(tp).getLocation().getZ()-(short) playerSheep.get(tp+1).getLocation().getZ(), 2)) > 10 ) {
+            if (  (Math.pow(  playerSheep.get(tp).getLocation().getX()- playerSheep.get(tp+1).getLocation().getX(), 2) 
+                            + Math.pow( playerSheep.get(tp).getLocation().getZ()- playerSheep.get(tp+1).getLocation().getZ(), 2)) > 10 ) {
 
                 playerSheep.get(tp+1).teleport(playerSheep.get(tp));
 //System.out.println(" телепорт овцы "+playerSheep.get(tp+1).getUniqueId()+" к "+playerSheep.get(tp).getUniqueId());
@@ -249,17 +542,18 @@ public class Snake {
     
     }
 
+    */
+
+
+
+
+
+
+
+
+
     
-
-
-
-
-
-
-
-
-    
-    public void terminate() {
+  /*  public void terminate() {
         stopTrack();
         
         //try { 
@@ -305,16 +599,20 @@ public class Snake {
         
         if (p!=null && p.isOnline()) p.getWorld().playSound(p.getLocation(), Sound.ENTITY_GHAST_SHOOT , 0.8f, 2.0f);
         p = null;
-    }
+    }*/
 
     
-    private void stopTrack() {
-        if (blockdismount != null)   blockdismount.cancel();
-        if (sheepspawn != null)   sheepspawn.cancel();
-        if (collisioncheck != null)    collisioncheck.cancel();
-        if (lostsheep != null)    lostsheep.cancel();
-        if (sheepcontrol != null)    sheepcontrol.cancel();
-    }
+    
+    
+ 
+        
+    //private void stopTrack() {
+      //  if (blockdismount != null)   blockdismount.cancel();
+      //  if (sheepspawn != null)   sheepspawn.cancel();
+      //  if (collisioncheck != null)    collisioncheck.cancel();
+       // if (lostsheep != null)    lostsheep.cancel();
+       // if (sheepcontrol != null)    sheepcontrol.cancel();
+   // }
     
     
     
@@ -323,92 +621,25 @@ public class Snake {
     
     
     
-    public Entity GetFirstShhep() {
-        if (this.playerSheep.size() >=1) return this.playerSheep.get(0);
-        else return null;
-    }
-    
-
-    public int getKills() {
-        return kills;
-    }
-    
-    
-    
-    public int GetSpeedBoost() {
-        return speedBoost;
-    }
-
-    public void SetSpeedBoost(int speed) {
-         if (a != null && a.getState() == GameState.INGAME)
-                speedBoost=speed;
-    }
-    
-    public void SetSugarBoosted(boolean b) {
-         if (a != null && a.getState() == GameState.INGAME)
-                sugarBoosted=b;
-    }
-    
-    public boolean IsSugarBoost() {
-        return sugarBoosted;
-    }
 
 
 
 
-    
-    public static void Pathfind(final Entity target, final Entity follower, final Player owner, final Arena minigame) {
-        (new BukkitRunnable() {
-            @Override
-            public void run() {
-                if (!minigame.hasStarted())   this.cancel();
-                if (!target.isValid())   this.cancel();
-
-
-                
-                final net.minecraft.world.entity.EntityInsentient nms_insentient = (EntityInsentient) ((CraftEntity)follower).getHandle();
-                final PathEntity pathEntity = nms_insentient.getNavigation().a(target.getLocation().getX(), target.getLocation().getY(), target.getLocation().getZ(), 1);
-                if (pathEntity != null) {
-                    nms_insentient.getNavigation().a(pathEntity, 1.0);
-                    nms_insentient.getNavigation().a(2.0);
-                }
-                
-                follower.getLocation().setDirection(target.getLocation().getDirection());
-
-                Double double1 = 60.0D;
-                Double double2 = 0.0D;
-                Double double3 = 0.0D;
-                
-                Double speed = Files.snakeDefaultSpeed;
-                if (minigame.HasSpeedBoost(owner)) {
-                    if (minigame.HasSugarBoosted(owner)) {
-                        speed = Files.snakeSugerBoostedSpeed;
-                    } else {
-                        speed = Files.snakeBoostedSpeed;
-                    }
-                }
-                double3 = speed * (double1 / 100.0D);
-                double2 = speed - double3;
-                speed = double2;
-                if (double2 < 0.1D)   speed = 0.2D;
-                nms_insentient.getAttributeInstance(GenericAttributes.a).setValue((double)speed);   //MOVEMENT_SPEED
-                
-                
-            }
-        }).runTaskTimer(Main.getInstance(), 0L, 2L);
-    }
 
 /*
     NoSuchFieldException: ay
 [13:13:30] [Server thread/WARN]: 	at java.base/java.lang.Class.getDeclaredField(Class.java:2549)
 [13:13:30] [Server thread/WARN]: 	at ru.ostrov77.snake.Objects.Snake.Set_yaw(Snake.java:405)
 */
-    public static void Set_yaw(Entity entity, Player player) {
+   // public static void Set_yaw(Entity entity, Player player) {
+        
+        //((LivingEntity)follower).setRotation(0, 0); ??
+        
         //((CraftSheep) entity).getHandle().ay = player.getLocation().getYaw(); //yaw
-        EntitySheep es = ((CraftSheep) entity).getHandle();
+      //  EntitySheep es = ((CraftSheep) entity).getHandle();
         //EntityLiving es = ((CraftSheep) entity).getHandle();
         //es.get
-        es.setPositionRotation(entity.getLocation().getX(), entity.getLocation().getY(), entity.getLocation().getZ(), player.getLocation().getYaw(), player.getLocation().getPitch());
+       // es.setPositionRotation(entity.getLocation().getX(), entity.getLocation().getY(), entity.getLocation().getZ(), player.getLocation().getYaw(), player.getLocation().getPitch());
       /*  try {
             Field field = es.getClass().getDeclaredField("ay");
             field.setAccessible(true);
@@ -417,22 +648,9 @@ public class Snake {
         } catch (NoSuchFieldException | SecurityException | IllegalAccessException ex) {
             ex.printStackTrace();
         }*/
-    }
+    //}
   
-    
-    private Entity spawnShepp(final Location location, final DyeColor color, final float yaw) {
-        final CraftWorld mcWorld = (CraftWorld) location.getWorld();
-        final CustomSheep custom_sheep = new CustomSheep (mcWorld);
 
-        custom_sheep.setLocation(location.getX(), location.getY(), location.getZ(), yaw, location.getPitch());
-        ((CraftLivingEntity) custom_sheep.getBukkitEntity()).setRemoveWhenFarAway(false);
-        //custom_sheep.setColor(numToEcc(color));
-        custom_sheep.setColor(EnumColor.valueOf(color.toString()));
-        
-        mcWorld.addEntity(custom_sheep, CreatureSpawnEvent.SpawnReason.CUSTOM);
-        
-        return custom_sheep.getBukkitEntity();
-    }
     
     
     
@@ -492,6 +710,10 @@ public class Snake {
         }
         return EnumColor.WHITE;
     }*/
+
+
+
+    
     
      
      

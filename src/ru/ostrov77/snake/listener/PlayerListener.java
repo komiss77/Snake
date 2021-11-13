@@ -36,7 +36,7 @@ import org.bukkit.event.player.PlayerSwapHandItemsEvent;
 import org.bukkit.event.weather.ThunderChangeEvent;
 import org.bukkit.event.weather.WeatherChangeEvent;
 import org.bukkit.event.world.StructureGrowEvent;
-import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.scheduler.BukkitRunnable;
 import ru.komiss77.ApiOstrov;
 
@@ -51,6 +51,7 @@ import ru.ostrov77.snake.Manager.AM;
 import ru.ostrov77.snake.Manager.Files;
 import ru.ostrov77.snake.Objects.Arena;
 import ru.ostrov77.snake.Objects.GameState;
+import ru.ostrov77.snake.Objects.Snake;
 
 
 
@@ -87,7 +88,7 @@ public class PlayerListener implements Listener {
     
 
     
- @EventHandler
+    @EventHandler
     public void FriendTeleport(FriendTeleportEvent e) {
         e.Set_canceled(true, "§e!");
     }
@@ -96,7 +97,7 @@ public class PlayerListener implements Listener {
     
     
     
-@EventHandler
+    @EventHandler
     public void onPlayerJoin(PlayerJoinEvent e) {
         JoinToLobby (e.getPlayer());
         if (!e.getPlayer().hasPlayedBefore()) {
@@ -119,7 +120,7 @@ public class PlayerListener implements Listener {
     
     
      
-@EventHandler
+    @EventHandler
     public void onHostileSpawn(CreatureSpawnEvent e) {
         
         if ( !e.getLocation().getWorld().getName().equals(Bukkit.getServer().getWorlds().get(0).getName()) && e.getEntity().getType() != EntityType.SHEEP )
@@ -135,14 +136,14 @@ public class PlayerListener implements Listener {
     
     
      
-@EventHandler
+    @EventHandler
     public void PlayerQuitEvent (PlayerQuitEvent playerquitevent) {
         Player player = playerquitevent.getPlayer();
         AM.GlobalPlayerExit (player);
     }
 
  
-@EventHandler
+    @EventHandler
     public void GoToLobby (PlayerChangedWorldEvent e) {
         if (e.getPlayer().getWorld().getName().equals(Bukkit.getWorlds().get(0).getName())) JoinToLobby(e.getPlayer());
     }
@@ -152,15 +153,15 @@ public class PlayerListener implements Listener {
 
     
     
-@EventHandler(priority = EventPriority.HIGH)
+    @EventHandler(priority = EventPriority.HIGH)
     public void onOpenInv (InventoryOpenEvent e) {
         Player player = (Player) e.getPlayer();
 
             if ( AM.isInGame(player) ) {
-                    e.setCancelled(true);
-                    player.closeInventory();
-                    player.sendMessage("Инвентарь заблокирован!");
-                }
+                e.setCancelled(true);
+                player.closeInventory();
+                player.sendMessage("Инвентарь заблокирован!");
+            }
 
     }
 
@@ -182,7 +183,7 @@ public class PlayerListener implements Listener {
                 if (PM.nameTagManager!=null && !e.getPlayer().getWorld().getName().equals("lobby")) {  
                     PM.nameTagManager.setNametag(e.getPlayer().getName(), "", "");
                 }
-                PM.getOplayer(p).score.getSideBar().reset();
+                if (PM.exist(p.getName()))PM.getOplayer(p).score.getSideBar().reset();
             }
         }.runTaskLater(Main.getInstance(), 1);
     }
@@ -231,7 +232,7 @@ public class PlayerListener implements Listener {
     }        
  */  
     
-@EventHandler
+    @EventHandler
     public void Damage (EntityDamageEvent e) {
         if (e.getEntity() instanceof Player) {
             Player p = (Player) e.getEntity();
@@ -249,12 +250,12 @@ public class PlayerListener implements Listener {
     }
 
      
-@EventHandler
+    @EventHandler
     public void damm(EntityDamageByEntityEvent e) {
             if (!e.getDamager().isOp()) e.setCancelled(true);
     }
     
-@EventHandler
+    @EventHandler
     public void PlayerArmorStandManipulateEvent(PlayerArmorStandManipulateEvent e){
         if (!e.getPlayer().isOp()) e.setCancelled(true);
     }    
@@ -267,13 +268,24 @@ public class PlayerListener implements Listener {
     public void speedBoostManager(PlayerInteractEvent e) {
         Player p = e.getPlayer();
 
-        if ( (e.getAction() == Action.RIGHT_CLICK_AIR || e.getAction() == Action.RIGHT_CLICK_BLOCK) && p.getItemInHand().getType() == Material.FEATHER) {
-         
-            if (!AM.isInGame(p)) return;
-            AM.getPlayersArena(p).SetSpeedBoost(p, Files.speedboostTimeTicks); 
+        if ( (e.getAction() == Action.RIGHT_CLICK_AIR || e.getAction() == Action.RIGHT_CLICK_BLOCK) && e.getItem()!=null && e.getMaterial() == Material.FEATHER) {
             
-            if (p.getItemInHand().getAmount() == 1)   p.setItemInHand(new ItemStack(Material.AIR));
-            else p.getItemInHand().setAmount(p.getItemInHand().getAmount() - 1);
+            Snake snake = AM.getSnake(p);
+            if (snake!=null && snake.arena.getState()==GameState.INGAME ) {
+                snake.speedBoost = Files.speedboostTimeTicks;
+            }
+            //if (!AM.isInGame(p)) return;
+            //AM.getPlayersArena(p).SetSpeedBoost(p, Files.speedboostTimeTicks); 
+            if (e.getItem().getAmount()==1) {
+                if (e.getHand()==EquipmentSlot.HAND) p.getInventory().getItemInMainHand().setType(Material.AIR);
+                else p.getInventory().getItemInOffHand().setType(Material.AIR);
+            } else {
+                if (e.getHand()==EquipmentSlot.HAND) p.getInventory().getItemInMainHand().setAmount(e.getItem().getAmount()-1);
+                else p.getInventory().getItemInOffHand().setAmount(e.getItem().getAmount()-1);
+            }
+            
+            //if (p.getItemInHand().getAmount() == 1)   p.setItemInHand(new ItemStack(Material.AIR));
+            //else p.getItemInHand().setAmount(p.getItemInHand().getAmount() - 1);
         }
     }
 
@@ -283,14 +295,51 @@ public class PlayerListener implements Listener {
     public void sugarPickupEventSpeed(EntityPickupItemEvent e) {
         if (e.getEntityType()!=EntityType.PLAYER) return;
             Player p = (Player) e.getEntity();
-
-            if ( !AM.isInGame(p) ) {
-                e.setCancelled(true);
-                e.getItem().remove();
-                return;
+            
+            
+            Snake snake = AM.getSnake(p);
+            if (snake!=null ) {
+                if (e.getItem().getItemStack().getType() == Material.SUGAR  && snake.arena.getState()==GameState.INGAME) {
+                    //e.setCancelled(true);
+                    //e.getItem().remove();
+                    //if ( !AM.getPlayersArena(p).hasStarted() ) return;
+                    if (AM.getPlayersArena(p).UseSugar(e.getItem())) {
+                        snake.speedBoost = Files.speedboostTimeTicks;
+                        snake.sugarBoosted = true;
+                        //AM.getPlayersArena(p).SetSpeedBoost(p, Files.speedboostTimeTicks); 
+                        //AM.getPlayersArena(p).SetSugarBoosted(p, true); 
+                    }
+                    
+                } else if (e.getItem().getItemStack().getType() == Material.GOLD_INGOT  && snake.arena.getState()==GameState.ENDING) {
+                    //e.setCancelled(true);
+                    //e.getItem().remove();
+                    //if ( AM.getPlayersArena(p).getState() != GameState.ENDING) return;
+                    AM.getPlayersArena(p).AddGold();
+                    p.playSound(p.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1.0F, 9.9F);
+                    //p.getWorld().playEffect(p.getLocation(), Effect.LAVA_POP, 0);
+         //ParticleEffect.LAVA.display(0.1F, 0.1F, 0.1F, 0.1F, 5, p.getEyeLocation(), 5.0D);
+                }
+            } //else {
+            
+            final Arena a = AM.getPlayersArena(p);
+            if (a!=null && a.getState()==GameState.ENDING && e.getItem().getItemStack().getType() == Material.GOLD_INGOT) {
+                AM.getPlayersArena(p).AddGold();
+                p.playSound(p.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1.0F, 9.9F);
+         //ParticleEffect.LAVA.display(0.1F, 0.1F, 0.1F, 0.1F, 5, p.getEyeLocation(), 5.0D);
             }
+            
+            e.setCancelled(true);
+            e.getItem().remove();
+           // }
+            
+            
+            //if ( !AM.isInGame(p) ) {
+           //     e.setCancelled(true);
+            //    e.getItem().remove();
+            //    return;
+            //}
                 
-                if (e.getItem().getItemStack().getType() == Material.SUGAR) {
+              /*  if (e.getItem().getItemStack().getType() == Material.SUGAR) {
                     e.setCancelled(true);
                     e.getItem().remove();
                     if ( !AM.getPlayersArena(p).hasStarted() ) return;
@@ -307,7 +356,7 @@ public class PlayerListener implements Listener {
                     p.playSound(p.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1.0F, 9.9F);
                     //p.getWorld().playEffect(p.getLocation(), Effect.LAVA_POP, 0);
          //ParticleEffect.LAVA.display(0.1F, 0.1F, 0.1F, 0.1F, 5, p.getEyeLocation(), 5.0D);
-                }
+                }*/
                         
 
 
@@ -345,11 +394,11 @@ public class PlayerListener implements Listener {
     public void onDrop(PlayerDropItemEvent e) {
         if (e.getPlayer().isOp()) return;
         e.setCancelled(true);
-        e.getItemDrop().remove();
-        ItemStack droped = e.getPlayer().getItemInHand().clone();
-        droped.setAmount(1);
-        e.getPlayer().setItemInHand(droped);
-        e.getPlayer().updateInventory();
+        //e.getItemDrop().remove();
+        //ItemStack droped = e.getPlayer().getItemInHand().clone();
+        //droped.setAmount(1);
+        //e.getPlayer().setItemInHand(droped);
+        //e.getPlayer().updateInventory();
     }     
     
     
