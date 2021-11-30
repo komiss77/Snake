@@ -267,7 +267,7 @@ public class Arena {
                 if (winner!=null) {
                     
                     playerTracker.get(winner_name).cancel();
-                    winner.sendTitle( "§aВы победили!", "§fСобирайте золото, это Ваша награда!",5,20,5);
+                    ApiOstrov.sendTitle(winner, "§aВы победили!", "§fСобирайте золото, это Ваша награда!",5,20,5);
                     winner.playSound(winner.getLocation(), Sound.BLOCK_ANVIL_FALL , 1.0F, 1.0F);
                     arenaLobby.getWorld().getPlayers().stream().forEach((p) -> {
                         p.sendMessage("§f§oПобедитель: " +  ColorUtils.ChatColorfromDyeColor(GetSheepColor(winner_name))+winner_name+ " §f§o Выбил игроков: §b" + playerTracker.get(winner_name).kills +" §f§o!");
@@ -487,7 +487,7 @@ public class Arena {
             if ( playerTracker.size() ==1 ) endGame();  
         }
                 
-        who.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, 60, 1), true);
+        who.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, 60, 1));
         who.getWorld().playSound(who.getLocation(), Sound.ENTITY_DONKEY_ANGRY , 0.8f, 2.0f);
         ApiOstrov.sendTitle(who, "", "§4Вы проиграли!");
         who.teleport(arenaLobby);
@@ -568,26 +568,7 @@ public class Arena {
 
 
     
-    /*
-    private void LoosePlayer (final Player p) {  
-        if ( !playerTracker.containsKey(p.getName()) ) return;
-                
-        playerTracker.get(p.getName()).cancel();
-        playerTracker.remove(p.getName());
-        if ( playerTracker.size() ==1 ) endGame();    
-                
-        p.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, 60, 1), true);
-        p.getWorld().playSound(p.getLocation(), Sound.ENTITY_DONKEY_ANGRY , 0.8f, 2.0f);
-        ApiOstrov.sendTitle(p, "", "§4Вы проиграли!");
-        p.teleport(arenaLobby);
-        ApiOstrov.addStat(p, Stat.SN_game);
-        ApiOstrov.addStat(p, Stat.SN_loose);
-        p.getInventory().clear();
-        p.getInventory().setItem(8, GuiListener.exitGame);
-        p.updateInventory();
 
-       // SignsListener.updateSigns( getName(), playerTracker.size(), maxplayers, getStateAsString(), playtime );
-    }  */
     
     public void AddGold () {
         this.pickupGold++;
@@ -843,7 +824,7 @@ public class Arena {
 
     public void SendTitle(final String t, final String st) {
         arenaLobby.getWorld().getPlayers().stream().forEach((p) -> {
-            p.sendTitle( t, st, 5, 20, 5);
+            ApiOstrov.sendTitle(p,  t, st, 5, 20, 5);
         });
     }
     
