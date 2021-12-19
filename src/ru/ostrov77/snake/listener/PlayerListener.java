@@ -181,7 +181,7 @@ public class PlayerListener implements Listener {
                 switchLocalGlobal(p, true);
                 perWorldTabList(e.getPlayer());
                 if (PM.nameTagManager!=null && !e.getPlayer().getWorld().getName().equals("lobby")) {  
-                    PM.nameTagManager.setNametag(e.getPlayer().getName(), "", "");
+                    PM.nameTagManager.setNametag(e.getPlayer(), "", "");
                 }
                 if (PM.exist(p.getName()))PM.getOplayer(p).score.getSideBar().reset();
             }

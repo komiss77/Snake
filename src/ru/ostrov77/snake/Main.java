@@ -57,22 +57,6 @@ private static Main instance;
         Bukkit.getServer().getPluginManager().registerEvents(new GuiListener(this), this);
         Bukkit.getServer().getPluginManager().registerEvents(new PlayerListener(), this);
         
-        //EntityTypeRegistry.registerEntities();
-        
-    //    MinecraftKey minecraftKey = new MinecraftKey("snake_sheep");
-        //EntityTypes.b.a(91, minecraftKey, CustomSheep.class);
-        //Map<Object, Type<?>> typeMap = (Map<Object, Type<?>>) DataConverterRegistry.a().getSchema(DataFixUtils.makeKey(SharedConstants.a().getWorldVersion())).findChoiceType(DataConverterTypes.ENTITY).types();
-        //typeMap.put(minecraftKey.toString(), typeMap.get("minecraft:" + MinecraftKey.a(type.getEntityType().g().getKey()).getKey().split("/")[1]));
-        
-        //  EntityTypes.a<Entity> entity = EntityTypes.a.a(type.b, EnumCreatureType.CREATURE);
-        //   IRegistry.a(IRegistry.ENTITY_TYPE, minecraftKey, entity.a("snake_sheep"));
-        
-        try {
-            //registerCustomEntity(CustomSheep.class, 11);
-        } catch (Exception ex) {
-            ex.printStackTrace();
-        }
-        
         
         Bukkit.getLogger().info("Змейка готова!");
         

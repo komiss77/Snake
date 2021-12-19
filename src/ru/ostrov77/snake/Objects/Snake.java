@@ -243,18 +243,7 @@ public class Snake implements Runnable {
         Entity sheep = spawnLoc.getWorld().spawnEntity(spawnLoc, EntityType.SHEEP);
         ((Sheep)sheep).setColor(color);
         ((LivingEntity)sheep).setRemoveWhenFarAway(false);
-        
-        //final CraftWorld mcWorld = (CraftWorld) location.getWorld();
-        //final CustomSheep custom_sheep = new CustomSheep (mcWorld);
 
-       // custom_sheep.setLocation(location.getX(), location.getY(), location.getZ(), yaw, location.getPitch());
-        //((CraftLivingEntity) custom_sheep.getBukkitEntity()).setRemoveWhenFarAway(false);
-        //custom_sheep.setColor(numToEcc(color));
-        //custom_sheep.setColor(EnumColor.valueOf(color.toString()));
-        
-        //mcWorld.addEntity(custom_sheep, CreatureSpawnEvent.SpawnReason.CUSTOM);
-        
-       // return custom_sheep.getBukkitEntity();
        return sheep;
     }    
     
@@ -262,62 +251,6 @@ public class Snake implements Runnable {
     
     
     
-/*
-    
-    public void Pathfind(final Entity target, final Entity follower, final Player owner, final Arena minigame) {
-        
-        //((LivingEntity)follower).setLeashHolder(target);
-        //((LivingEntity)follower).setAI(false);
-        //((LivingEntity)follower).setRotation(0, 0);
-        
-        
-        //(new BukkitRunnable() {
-         //   @Override
-         //   public void run() {
-         //       if (!minigame.hasStarted())   this.cancel();
-         //       if (!target.isValid())   this.cancel();
-
-                Mob mob = (Mob) follower;
-                
-                //mob.getBoundingBox().
-                mob.getPathfinder().moveTo((LivingEntity) target);
-                mob.lookAt(target);
-                
-                //EntitySheep nms_target = (EntitySheep) ((CraftEntity)target).getHandle();
-                
-                //final net.minecraft.world.entity.EntityInsentient nms_follower = (EntityInsentient) ((CraftEntity)follower).getHandle();
-                //final PathEntity pathEntity = nms_insentient.getNavigation().a(target.getLocation().getX(), target.getLocation().getY(), target.getLocation().getZ(), 1);
-                
-                //nms_sheep.targetSelector.a(0, new PathfinderGoalNearestAttackableTarget<EntityHuman>(nmsCow, EntityHuman.class, false));
-                //nms_follower.bP.b(PathfinderGoal.Type.a);
-                //final PathEntity pathEntity = nms_follower.getNavigation().getPath();//a(target.getLocation().getX(), target.getLocation().getY(), target.getLocation().getZ(), 1);
-                //if (pathEntity != null) {
-                //    nms_follower.getNavigation().a(pathEntity, 1.0);
-                //    nms_follower.getNavigation().a(2.0);
-                //}
-                
-                //follower.getLocation().setDirection(target.getLocation().getDirection());
-
-                Double double1 = 60.0D;
-                Double double2 = 0.0D;
-                Double double3 = 0.0D;
-                
-                Double speed = Files.snakeDefaultSpeed;
-                if (speedBoost>0) { //if (minigame.HasSpeedBoost(owner)) {
-                    if (sugarBoosted) { //if (minigame.HasSugarBoosted(owner)) {
-                        speed = Files.snakeSugerBoostedSpeed;
-                    } else {
-                        speed = Files.snakeBoostedSpeed;
-                    }
-                }
-                double3 = speed * (double1 / 100.0D);
-                double2 = speed - double3;
-                speed = double2;
-                if (double2 < 0.1D)   speed = 0.2D;
-                //nms_follower.getAttributeInstance(GenericAttributes.a).setValue((double)speed);   //MOVEMENT_SPEED
-                
-    }*/
-
 
 
 

@@ -45,51 +45,17 @@ public class GuiListener implements Listener {
         
     }
 
-
-    /*
-    private static Entity spawnShepp(final Location location, final DyeColor color, final float yaw) {
-        final CraftWorld mcWorld = (CraftWorld) location.getWorld();
-        final CustomSheep custom_sheep = new CustomSheep (mcWorld);
-
-        custom_sheep.setLocation(location.getX(), location.getY(), location.getZ(), yaw, location.getPitch());
-        ((CraftLivingEntity) custom_sheep.getBukkitEntity()).setRemoveWhenFarAway(false);
-        //custom_sheep.setColor(numToEcc(color));
-        custom_sheep.setColor(EnumColor.valueOf(color.toString()));
-        
-        mcWorld.addEntity(custom_sheep, CreatureSpawnEvent.SpawnReason.CUSTOM);
-        
-        return custom_sheep.getBukkitEntity();
-    }
-    */
     
     
     
     
     
-@EventHandler (priority = EventPriority.NORMAL, ignoreCancelled = false)
+    @EventHandler (priority = EventPriority.NORMAL, ignoreCancelled = false)
     public static void onRightClick(PlayerInteractEvent e) {
         Player p = e.getPlayer();
         final ItemStack item = e.getItem();
 
-        
-      /*  if(item!=null && item.getType()==Material.TRIDENT) {
-            e.setCancelled(true);
-            
-            Entity masterSheep = spawnShepp(p.getLocation(), DyeColor.LIME, p.getLocation().getYaw());
 
-            if (masterSheep != null && masterSheep.isValid()) {
-                //masterSheep.setPassenger(player);
-                //if (!masterSheep.getPassengers().contains(player)) masterSheep.addPassenger(player);
-                masterSheep.addPassenger(e.getPlayer());
-                ((Sheep) masterSheep).setColor(DyeColor.LIME);
-
-            } else {
-                Bukkit.getLogger().info("Unable to spawn first sheep...");
-                Bukkit.getLogger().info("The problem is most likely because you have animals disabled, especially if you\'re running Multiverse.");
-            }
-            
-            return;
-        }*/
         
         
         
