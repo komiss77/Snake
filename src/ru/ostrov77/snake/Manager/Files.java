@@ -27,9 +27,9 @@ public class Files {
     public static int creditOnHitSomeoneOut = 5;
     public static int creditForParticipation = 2;
     public static int speedboostTimeTicks = 70;
-    public static double snakeDefaultSpeed = 0.45D;
-    public static double snakeBoostedSpeed = 0.65D;
-    public static double snakeSugerBoostedSpeed = 0.55D;
+    //public static double snakeDefaultSpeed = 0.45D;
+    //public static double snakeBoostedSpeed = 0.65D;
+    //public static double snakeSugerBoostedSpeed = 0.55D;
     public static int chanceOfSugerSpawning = 5;
     public static int maxSugarOnGround = 7;
     public static boolean allowHostileMobSpawningInArena;
@@ -125,10 +125,10 @@ public class Files {
         Files.ferrariKitBoosts = Files.plugin.getConfig().getInt("ferrariKitBoosts");
         Files.fastKitBoosts = Files.plugin.getConfig().getInt("fastKitBoosts");
         Files.speedboostTimeTicks = Files.plugin.getConfig().getInt("speedboostTimeTicks");
-        Files.snakeDefaultSpeed = Files.plugin.getConfig().getDouble("snakeDefaultSpeed");
-        Files.snakeBoostedSpeed = Files.plugin.getConfig().getDouble("snakeBoostedSpeed");
+        //Files.snakeDefaultSpeed = Files.plugin.getConfig().getDouble("snakeDefaultSpeed");
+        //Files.snakeBoostedSpeed = Files.plugin.getConfig().getDouble("snakeBoostedSpeed");
         Files.chanceOfSugerSpawning = Files.plugin.getConfig().getInt("chanceOfSugerSpawning");
-        Files.snakeSugerBoostedSpeed = Files.plugin.getConfig().getDouble("snakeSugerBoostedSpeed");
+        //Files.snakeSugerBoostedSpeed = Files.plugin.getConfig().getDouble("snakeSugerBoostedSpeed");
         Files.maxSugarOnGround = Files.plugin.getConfig().getInt("maxSugarOnGround");
         Files.allowHostileMobSpawningInArena = Files.plugin.getConfig().getBoolean("allowHostileMobSpawningInArena");
 

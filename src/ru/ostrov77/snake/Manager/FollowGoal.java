@@ -11,6 +11,8 @@ import org.bukkit.entity.Mob;
 import org.bukkit.entity.Sheep;
 import org.bukkit.util.Vector;
 import ru.komiss77.Ostrov;
+import ru.ostrov77.snake.Objects.Arena;
+import ru.ostrov77.snake.Objects.GameState;
 
 
 
@@ -21,14 +23,18 @@ import ru.komiss77.Ostrov;
 
     public class FollowGoal implements Goal<Sheep> {
         
-        private final GoalKey<Sheep> key;
+        public static final GoalKey<Sheep> key = GoalKey.of(Sheep.class, new NamespacedKey(Ostrov.instance, "snake"));
         private final Mob mob;
-        private LivingEntity target;
+        private final LivingEntity target;
+        private final Arena arena;
+        private int tick;
         
-        public FollowGoal(Mob mob, LivingEntity target) {
-            this.key = GoalKey.of(Sheep.class, new NamespacedKey(Ostrov.instance, "snake"));
+        public FollowGoal(Mob mob, LivingEntity target, final Arena arena) {
+//Bukkit.broadcastMessage("FollowGoal "+target.getName());
+            //this.key = GoalKey.of(Sheep.class, new NamespacedKey(Ostrov.instance, "snake"));
             this.mob = mob;
             this.target = target;
+            this.arena = arena;
         }
  
         @Override
@@ -58,7 +64,8 @@ import ru.komiss77.Ostrov;
         public void stop() {
             mob.getPathfinder().stopPathfinding();
             mob.setTarget(null);
-            //cooldown = 100;
+ //Bukkit.broadcastMessage("!!!!!!!!!!!!!!!!!!!! stop "+target.getName());
+           //cooldown = 100;
         }
  
         
@@ -69,20 +76,56 @@ import ru.komiss77.Ostrov;
             
             if (target==null || target.isDead()) {
                 mob.getPathfinder().stopPathfinding();
+ //Bukkit.broadcastMessage("!!!!!!!!!!!!!!!!!!!! stop222 "+target.getName());
                 return;
             }
+//Bukkit.broadcastMessage("tick "+target.getName()+" "+mob.getTicksLived()+" "+arena.getState());
+            if (arena.getState()!=GameState.INGAME) return;
             
-            //mob.setTarget( target);
-            //if (mob.getPathfinder().getCurrentPath()==null) {
-            if (mob.getTicksLived()%10==0) {
-                final PathResult path = mob.getPathfinder().findPath(target);
+            if (tick%5==0) { //моб тикает через раз, так что реально будет 10
+//Bukkit.broadcastMessage("tick%10 "+target.getName()+" "+mob.getTicksLived());
+                
+                final PathResult path =  mob.getPathfinder().findPath(target);
+                
+               // if (target.getType()==EntityType.PLAYER) { //для первой овцы
+                    
+                    //mob.setRotation(target.getLocation().getYaw(), 0);
+                    
+                   // final Vector direction = target.getLocation().getDirection();
+                    
+//Bukkit.broadcastMessage(target.getName()+" direction="+direction);
+
+                   // direction.setY(0);
+                   // direction.multiply(3);
+                    
+//Bukkit.broadcastMessage("   direction="+direction);
+                    
+                   // final Location moveTo = mob.getEyeLocation().add(direction);
+//Bukkit.broadcastMessage(target.getName()+LocationUtil.StringFromLoc(mob.getLocation()).replaceFirst("map2:", "")+"->"+LocationUtil.StringFromLoc(moveTo).replaceFirst("map2:", ""));
+///if (target.getName().equals("komiss77")) Bukkit.broadcastMessage(LocationUtil.StringFromLoc(mob.getLocation()).replaceFirst("map2:", "")+
+//        "->"+LocationUtil.StringFromLoc(moveTo).replaceFirst("map2:", "")
+//+"   direction="+direction);
+
+                   // path = mob.getPathfinder().findPath(moveTo); //направляем на точку 2 блока впереди игрока
+                    
+                //} else {
+                    
+                   // path = mob.getPathfinder().findPath(target); //направляем просто за целью
+                    
+                //}
+                
                 if (path!=null) {
 //Bukkit.broadcastMessage(cc+"path==null"  );
-                //} else {
-                    boolean done=mob.getPathfinder().moveTo( path);
-//Bukkit.broadcastMessage(cc+"setPathResult?"+done+" "+Arrays.toString(path.getPoints().toArray())  );
+                   boolean done = mob.getPathfinder().moveTo( path);
+//if(target.getType()==EntityType.PLAYER) Bukkit.broadcastMessage( target.getName()+" moveTo="+LocationUtil.StringFromLoc(path.getFinalPoint())+(done ? "+":"-"));
+//Bukkit.broadcastMessage("       setPathResult?"+done+" "+Arrays.toString(path.getPoints().toArray())  );
+                } else {
+//if(target.getType()==EntityType.PLAYER) Bukkit.broadcastMessage( target.getName()+" path=null");
                 }
+//Bukkit.broadcastMessage("");         
             }
+            
+            tick++;
                 //final PathResult path = mob.getPathfinder().findPath(target);
                // mob.getPathfinder().moveTo( path);
             //}
@@ -113,6 +156,13 @@ import ru.komiss77.Ostrov;
             }
         }
  
+        
+        
+        
+        
+        
+        
+        
         @Override
         public GoalKey<Sheep> getKey() {
             return key;

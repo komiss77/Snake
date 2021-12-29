@@ -1,5 +1,6 @@
 package ru.ostrov77.snake.Objects;
 
+import com.destroystokyo.paper.entity.ai.Goal;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -30,14 +31,17 @@ import com.xxmicloxx.NoteBlockAPI.RadioSongPlayer;
 import com.xxmicloxx.NoteBlockAPI.Song;
 import org.bukkit.DyeColor;
 import org.bukkit.entity.EntityType;
+import org.bukkit.entity.Mob;
 import ru.komiss77.ApiOstrov;
 import ru.komiss77.enums.Stat;
 import ru.komiss77.utils.ColorUtils;
+import ru.komiss77.utils.LocationUtil;
 
 import ru.ostrov77.snake.listener.GuiListener;
 import ru.ostrov77.snake.Main;
 import ru.ostrov77.snake.Manager.AM;
 import ru.ostrov77.snake.Manager.Files;
+import ru.ostrov77.snake.Manager.FollowGoal;
 import ru.ostrov77.snake.Manager.Shop;
 
 
@@ -57,7 +61,7 @@ public class Arena {
     private Set<String> players = new HashSet<>();
     
     private int minPlayers,maxplayers;
-    private int cdCounter=40;//ожид в лобби арены
+    private int cdCounter=30;//ожид в лобби арены
     private int prestart=7;//ожид сидя на овцах
     private int playtime,pickupGold=0;
     private int ending=20;//салюты,награждения
@@ -109,14 +113,14 @@ public class Arena {
                 public void run() {
 
                     if (cdCounter == 0) {
-                            Arena.this.cdCounter = 40;
+                            Arena.this.cdCounter = 30;
                             this.cancel();
                             PrepareToStart();
 
                     } else if ( players.size() < minPlayers ) {
                         SendAB("§d§lНедостаточно участников, счётчик остановлен.");
                         setState(GameState.WAITING);
-                        Arena.this.cdCounter = 40;
+                        Arena.this.cdCounter = 30;
                         this.cancel();
 
                     } else if ( players.size() == maxplayers && cdCounter > 10 ) {
@@ -160,6 +164,7 @@ public class Arena {
             //for (int i=0; i<players.size(); i++) {                      //распределение игроков по спавнам
             int i=0;
             for (Player p:getPlayers()) {                      //распределение игроков по спавнам
+//Bukkit.broadcastMessage("§ePrepareToStart"+p.getName());
                 //Player p = players.get(i);
                // if (p!=null && p.isOnline()) {
                     p.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, 5, 1), true);
@@ -229,12 +234,22 @@ public class Arena {
                 @Override
                 public void run() {
 
+//for (Snake sn : playerTracker.values()) {
+   // Mob mob = (Mob) sn.masterSheep;
+    //boolean has = Bukkit.getMobGoals().hasGoal(mob, FollowGoal.key);
+    //Bukkit.broadcastMessage("-> snake:"+sn.name+" goal size="+Bukkit.getMobGoals().getAllGoals(mob).size());
+    //for( Goal g : Bukkit.getMobGoals().getAllGoals(mob)) {
+        //Bukkit.broadcastMessage(""+g.getKey().getNamespacedKey()+" "+g.getTypes().toString());
+        //Bukkit.broadcastMessage(mob.getPathfinder().hasPath() ? ("getFinalPoint="+LocationUtil.StringFromLoc(mob.getPathfinder().getCurrentPath().getFinalPoint())) : "!hasPath" );
+    //}
+    //Bukkit.broadcastMessage("");
+//}
                     if ( playerTracker.isEmpty() || playtime > 150 && canreset) {
                         SendTitle("Время вышло!", "Игра окончена!");
-                        resetGame();
+                        endGame(true);//resetGame();
                     } else if (playerTracker.size()==1) {
                             this.cancel();
-                            endGame();
+                            endGame(false);
                     }
 
                     playtime++;
@@ -250,7 +265,7 @@ public class Arena {
 
 
 
-    public void endGame() {   
+    public void endGame(final boolean timeOut) {   
         if (getState() != GameState.INGAME) return;
         state=GameState.ENDING;
         if (GameTimer != null)  GameTimer.cancel();
@@ -260,8 +275,7 @@ public class Arena {
         
       //  try {
             final String winner_name = playerTracker.keySet().stream().findFirst().get();
-            
-            if (winner_name!=null && !winner_name.isEmpty()) {
+            if (!timeOut && winner_name!=null && !winner_name.isEmpty()) {
                 
                 final Player winner = Bukkit.getPlayerExact(winner_name);
                 if (winner!=null) {
@@ -304,7 +318,8 @@ public class Arena {
 
                             --ending;
                         }
-                    }).runTaskTimer(Main.getInstance(), 0L, 20L);                    
+                    }).runTaskTimer(Main.getInstance(), 0L, 20L);    
+                    
                 } else {
                     resetGame();
                 }
@@ -313,47 +328,6 @@ public class Arena {
                 resetGame();
             }
  
-            
-
-           /* this.EndGame = (new BukkitRunnable() {
-                @Override
-                public void run() {
-
-                    if (ending > 5) SendAB("§5Собрано: §4"+pickupGold+"  §6Времени осталось: §b"+(ending-5) );
-
-                    if (ending > 5 && ending <= 10 ) {
-                        SendSound(Sound.BLOCK_COMPARATOR_CLICK);
-                    } 
-
-                    if (ending == 6) winner.addPotionEffect(new PotionEffect(PotionEffectType.LEVITATION, 130, 0));
-
-                    if (ending == 5) {
-                        winner.sendMessage("§fСлитков собрано: §b"+pickupGold+" §f!" );
-                        //winner.sendMessage("§fВы получаете на счёт §6"+pickupGold*10+" §fр.!" );
-                        ApiOstrov.addStat(winner, Stat.SN_game);
-                        ApiOstrov.addStat(winner, Stat.SN_win);
-                        for (int g=0; g<pickupGold;g++) {
-                            ApiOstrov.addStat(winner, Stat.SN_gold);
-                        }
-                        ApiOstrov.moneyChange(winner, pickupGold*10, "Змейка, собрано слитков: "+pickupGold);
-                        firework(winner);
-                    }
-
-                    if (ending <=0) {
-                         this.cancel();
-                         resetGame();
-                    }
-
-                    --ending;
-                }
-            }).runTaskTimer(Main.getInstance(), 0L, 20L);*/
-
-
-      //  } catch (NullPointerException e) {
-//
-       //     resetGame();
-
-       // }   
 
 
 
@@ -391,7 +365,7 @@ public class Arena {
         SheepColor.clear();
 
 
-        cdCounter=40;
+        cdCounter=30;
         prestart = 7;
         playtime = 0;
         ending=20;
@@ -484,7 +458,7 @@ public class Arena {
         if ( playerTracker.containsKey(who.getName()) ) {
             playerTracker.get(who.getName()).cancel();
             playerTracker.remove(who.getName());
-            if ( playerTracker.size() ==1 ) endGame();  
+            if ( playerTracker.size() ==1 ) endGame(false);  
         }
                 
         who.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, 60, 1));
@@ -538,7 +512,7 @@ public class Arena {
                 players.remove(p.getName());
                     if (players.size() < minPlayers && CoolDown != null) {
                         CoolDown.cancel();
-                        cdCounter = 40;
+                        cdCounter = 30;
                         SendAB("§d§lНедостаточно участников, счётчик остановлен.");
                         setState(GameState.WAITING);
                     }
@@ -555,7 +529,7 @@ public class Arena {
                 playerTracker.remove(p.getName());
                 //SignsListener.updateSigns( getName(), playerTracker.size(), maxplayers, getStateAsString(), playtime );
                 Main.sendBsignChanel(name, "§2"+ arenaLobby.getWorld().getPlayers().size(), getStateAsString(), ru.komiss77.enums.GameState.ПЕРЕЗАПУСК, arenaLobby.getWorld().getPlayers().size());
-                if ( playerTracker.size() ==1 ) endGame();   
+                //if ( playerTracker.size() ==1 ) endGame();   тут нельзя, или определит победиля при таймауте
             } 
             if ( players.contains(p.getName()) ) players.remove(p.getName());
             p.teleport(Bukkit.getServer().getWorlds().get(0).getSpawnLocation());

@@ -2,7 +2,6 @@ package ru.ostrov77.snake.Objects;
 
 import java.util.ArrayList;
 import java.util.List;
-
 import org.bukkit.Bukkit;
 import org.bukkit.DyeColor;
 import org.bukkit.Effect;
@@ -10,7 +9,6 @@ import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.attribute.Attribute;
-
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Item;
@@ -23,13 +21,18 @@ import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.util.BoundingBox;
 import org.bukkit.util.Vector;
 import ru.komiss77.Ostrov;
-import ru.ostrov77.snake.Manager.Files;
+import ru.komiss77.utils.LocationUtil;
 import ru.ostrov77.snake.Manager.FollowGoal;
 
 
 
 public class Snake implements Runnable {
 
+    
+    public static double snakeDefaultSpeed = 0.35D; //SPEED_ORIG=0.23000000417232513
+    public static double snakeBoostedSpeed = 0.55D; //0.65D;
+    public static double snakeSugerBoostedSpeed = 0.45D;//0.55D;
+    
     private int tick = 1; //или все % сработаюи на 0
     public final Arena arena;
     public String name;
@@ -38,29 +41,35 @@ public class Snake implements Runnable {
     private BukkitTask task;
     
     private final List <Entity> playerSheep = new ArrayList<>();
-    private final Entity masterSheep;
+    protected final Entity masterSheep;
     
     private final DyeColor color;
     public int kills;
     public int speedBoost;
-    public double speed = Files.snakeDefaultSpeed;//1.0D;  //скорость овцы по умолчанию 0,23
+    public double speed = snakeDefaultSpeed; //Files.snakeDefaultSpeed;//1.0D;  //скорость овцы по умолчанию 0,23
     public boolean sugarBoosted = false;
 
     
     
-    public Snake(Player p, DyeColor color, Arena arena) {
+public Snake(Player p, DyeColor color, Arena arena) {
         name = p.getName();
         this.arena = arena;
         this.color = color;
         
+        //carrot = p.getWorld().spawn(getCarrotLoc(p), ArmorStand.class);//p.getWorld().spawnEntity(getCarrotLoc(p), EntityType.ARMOR_STAND);
+        //carrot.setAI(false);
+        //carrot.setInvulnerable(true);
+        //carrot.setSmall(true);
+        //carrot.setBasePlate(false);
         
-        masterSheep = spawnShepp(p.getLocation(), color, p.getLocation().getYaw());
+        masterSheep = spawnSheep(p);
+//Bukkit.broadcastMessage("§enew Snake "+p.getName());
 
         if (masterSheep != null && masterSheep.isValid()) {
             
-            masterSheep.addPassenger(p);
-            ((Sheep) masterSheep).setColor(color);
-            playerSheep.add(masterSheep);       //добавляем первой первую овцу
+            masterSheep.addPassenger(p); 
+            //((Sheep) masterSheep).setColor(color);
+            //playerSheep.add(masterSheep);       // в spawnSheep добавляем первой первую овцу
             task = Bukkit.getScheduler().runTaskTimer(Ostrov.instance, this, 1, 1);
             
         } else {
@@ -75,8 +84,18 @@ public class Snake implements Runnable {
     
     
     
+    
+    
+    
+    
+    
+    
+    
+    
+    
     @Override
     public void run() {
+        
         final Player p = Bukkit.getPlayerExact(name);
 //System.out.println("run name="+name+" p="+p+" arena="+arena+" state="+arena.getState());        
         if (p==null || !p.isOnline()) {
@@ -132,93 +151,118 @@ public class Snake implements Runnable {
         
         //управление мастер-овцой
         if (arena.getState() == GameState.INGAME) {
-            
-            //Location location = masterSheep.getLocation();
-            //location.setDirection(p.getLocation().getDirection());
-            //location.setPitch(0.0F);
-            //((Mob)masterSheep).setRotation(p.getLocation().getYaw(), p.getLocation().getPitch());
-            ((Mob)masterSheep).setRotation(p.getLocation().getYaw(), 0);
 
             if (speedBoost > 0) {
                 if (sugarBoosted)  {
-                    setSpeed(Files.snakeSugerBoostedSpeed);
+                    updateSpeed(snakeSugerBoostedSpeed);
                 } else {
-                    setSpeed(Files.snakeSugerBoostedSpeed);
+                    updateSpeed(snakeSugerBoostedSpeed);
                 }
                 --speedBoost;
                 if (speedBoost==0) {
-                    setSpeed(Files.snakeDefaultSpeed);
+                    updateSpeed(snakeDefaultSpeed);
                     sugarBoosted = false;
                 }
-            }// else {
-            //    speedMultipler = Files.snakeDefaultSpeed;
-            //    sugarBoosted = false;
-            //}
-
-            Vector vector = masterSheep.getLocation().getDirection().multiply(speed);
-            vector.setY(0);
-            //Set_yaw(masterSheep, p);
-            //((Mob)masterSheep).lookAt();
+            }
+            
+            //carrot.teleport(getCarrotLoc(p));
+            //final Vector vector = masterSheep.getLocation().getDirection().multiply(speed);
+            masterSheep.setRotation(p.getLocation().getYaw(), 0); //ориентация головы как у седока, но только вправо-влево
+            
+            if (tick%10==0) {
+                
+                Location loc = p.getLocation();
+                loc.setPitch(0);
+                //double yaw = loc.getYaw();
+                final Vector direction = loc.getDirection();
+                
+                //direction.setY(0);
+                direction.multiply(3);
+//Bukkit.broadcastMessage("   direction="+direction);
+                final Location moveTo = masterSheep.getLocation().add(direction);
+                final Mob mob = (Mob) masterSheep;
+                mob.getPathfinder().moveTo(moveTo);
+//if (name.equals("komiss77")) Bukkit.broadcastMessage(LocationUtil.StringFromLoc(mob.getLocation()).replaceFirst("map2:", "")+
+//        "->"+LocationUtil.StringFromLoc(moveTo).replaceFirst("map2:", "")
+//+"   direction="+direction);
+            }
+            
+            //final Vector vector = masterSheep.getLocation().getDirection();
+           // vector.multiply(speed);
+            
+            //vector.setY(0); //vector.setY(0.05); //с 0 втыкается в пиксель!
+            
 //System.out.println("setVelocity "+vector.multiply(speedMultipler));
-            masterSheep.setVelocity(vector.multiply(speed));
+            //masterSheep.setVelocity(vector);
+            
             
         }
+        
         
         
 //if (playerSheep.size()>=2) { tick++; return; } //отладка
 
 
         if (tick>50 && tick%40==0 && arena.getState() == GameState.INGAME ) { //SheepSpawn
-            Entity last = playerSheep.get(playerSheep.size()-1);
-            Entity sheep = spawnShepp(last.getLocation(), color, last.getLocation().getYaw());
-//Main.nmsAccess.pathfind(playerSheep.get(playerSheep.size()-1), sheep, p, a);
-            Mob mob = (Mob) sheep;
-            
-            Bukkit.getMobGoals().removeAllGoals(((Sheep)sheep));
-            FollowGoal goal = new FollowGoal(mob, (LivingEntity) last);
-            //if (!Bukkit.getMobGoals().hasGoal(((Sheep)sheep), goal.getKey())) {
-                Bukkit.getMobGoals().addGoal((Sheep)sheep, 1, goal);
-            //}
-
-            playerSheep.add(sheep);
-//Bukkit.broadcastMessage("SPEED_ORIG="+((LivingEntity)sheep).getAttribute(Attribute.GENERIC_MOVEMENT_SPEED).getBaseValue()  );
-
-            setSpeed(speed);
-            //Double double1 = 60.0D;
-            //Double double2 = 0.0D;
-            //Double double3 = 0.0D;
-            //double3 = speed * (double1 / 100.0D);
-            //double2 = speed - double3;
-            //speed = double2;
-            //Double double1 = 60.0D;
-            //Double double2 = 0.0D;
-            //Double double3 = 0.0D;
-            //double3 = speed * (double1 / 100.0D);
-            //double2 = speed - double3;
-            //speed = speed - (speed * (60.0D / 100.0D));
-            //if (speed < 0.1D) speed = 0.2D;
-            //((LivingEntity)sheep).getAttribute(Attribute.GENERIC_MOVEMENT_SPEED).setBaseValue(speed);
-            //((LivingEntity)sheep).getAttribute(Attribute.GENERIC_FOLLOW_RANGE).setBaseValue();
-            //Pathfind(last, sheep, p, arena);
+            final Entity lastSheep = playerSheep.get(playerSheep.size()-1);
+            spawnSheep(lastSheep);
         }        
-        
-        
 
-
-        
         tick++;
         
     }    
 
+
     
-    private void setSpeed(final double newSpeed) {
-        speed = newSpeed;
+    
+    //private Entity spawnShepp(final Location spawnLoc, final DyeColor color, final float yaw) {
         
-        Double double1 = 60.0D;
-        Double double2 = 0.0D;
-        Double double3 = 0.0D;
-        double3 = speed * (double1 / 100.0D);
-        double2 = speed - double3;
+    //    Entity sheep = spawnLoc.getWorld().spawnEntity(spawnLoc, EntityType.SHEEP);
+    //    ((Sheep)sheep).setColor(color);
+        //((LivingEntity)sheep).setRemoveWhenFarAway(false);
+
+     //  return sheep;
+    //}    
+    
+    
+    
+
+
+    
+    private Entity spawnSheep(final Entity target) {
+        //Entity newSheep = spawnShepp(target.getLocation(), color, target.getLocation().getYaw());
+        final Entity newSheep = target.getWorld().spawnEntity(target.getLocation(), EntityType.SHEEP);
+        newSheep.setInvulnerable(true);
+        ((Sheep)newSheep).setColor(color);
+        //final Mob mob = (Mob) newSheep;
+        Bukkit.getMobGoals().removeAllGoals(((Sheep)newSheep));
+        if (target.getType()!=EntityType.PLAYER) {
+            final FollowGoal goal = new FollowGoal((Mob) newSheep, (LivingEntity) target, arena);
+            Bukkit.getMobGoals().addGoal((Sheep)newSheep, 1, goal);
+        }
+        //if (!Bukkit.getMobGoals().hasGoal(((Sheep)sheep), goal.getKey())) {
+            //Bukkit.getMobGoals().addGoal((Sheep)newSheep, 1, goal);
+//Bukkit.broadcastMessage("addGoal "+name+Bukkit.getMobGoals().getAllGoals(mob));
+        //}
+        playerSheep.add(newSheep);
+//Bukkit.broadcastMessage("SPEED_ORIG="+((LivingEntity)newSheep).getAttribute(Attribute.GENERIC_MOVEMENT_SPEED).getBaseValue()  );
+        ((LivingEntity)newSheep).getAttribute(Attribute.GENERIC_MOVEMENT_SPEED).setBaseValue(speed);
+        //updateSpeed(speed);
+        return newSheep;
+    }    
+    
+    
+    
+    
+    private void updateSpeed(final double newSpeed) {
+        
+        //speed = newSpeed;
+        
+        //Double double1 = 60.0D;
+        //Double double2 = 0.0D;
+        //Double double3 = 0.0D;
+        //double3 = speed * (double1 / 100.0D);
+        //double2 = speed - double3;
         //speed = double2;
             //Double double1 = 60.0D;
             //Double double2 = 0.0D;
@@ -226,29 +270,16 @@ public class Snake implements Runnable {
             //double3 = speed * (double1 / 100.0D);
             //double2 = speed - double3;
             //speed = speed - (speed * (60.0D / 100.0D));
-        if (double2 < 0.1D) double2 = 0.2D;
+        //if (double2 < 0.1D) double2 = 0.2D;
         
-        double2 = speed;
+        //double2 = speed;
                 
 //Bukkit.broadcastMessage("setSpeed="+double2 );
         for (Entity sheep : playerSheep) {
-            ((LivingEntity)sheep).getAttribute(Attribute.GENERIC_MOVEMENT_SPEED).setBaseValue(double2);
+            ((LivingEntity)sheep).getAttribute(Attribute.GENERIC_MOVEMENT_SPEED).setBaseValue(newSpeed);
         }
     }    
 
-    
-    
-    private Entity spawnShepp(final Location spawnLoc, final DyeColor color, final float yaw) {
-        
-        Entity sheep = spawnLoc.getWorld().spawnEntity(spawnLoc, EntityType.SHEEP);
-        ((Sheep)sheep).setColor(color);
-        ((LivingEntity)sheep).setRemoveWhenFarAway(false);
-
-       return sheep;
-    }    
-    
-    
-    
     
     
 
@@ -643,6 +674,7 @@ public class Snake implements Runnable {
         }
         return EnumColor.WHITE;
     }*/
+
 
 
 
