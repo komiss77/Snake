@@ -304,10 +304,10 @@ public class Arena {
                                 //winner.sendMessage("§fВы получаете на счёт §6"+pickupGold*10+" §fр.!" );
                                 ApiOstrov.addStat(winner, Stat.SN_game);
                                 ApiOstrov.addStat(winner, Stat.SN_win);
-                                for (int g=0; g<pickupGold;g++) {
-                                    ApiOstrov.addStat(winner, Stat.SN_gold);
-                                }
-                                ApiOstrov.moneyChange(winner, pickupGold*10, "Змейка, собрано слитков: "+pickupGold);
+                                //for (int g=0; g<pickupGold;g++) {
+                                    ApiOstrov.addStat(winner, Stat.SN_gold, pickupGold);
+                                //}
+                                //ApiOstrov.moneyChange(winner, pickupGold*10, "Змейка, собрано слитков: "+pickupGold);
                                 firework(winner);
                             }
 

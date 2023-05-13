@@ -21,7 +21,6 @@ import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.util.BoundingBox;
 import org.bukkit.util.Vector;
 import ru.komiss77.Ostrov;
-import ru.komiss77.utils.LocationUtil;
 import ru.ostrov77.snake.Manager.FollowGoal;
 
 
