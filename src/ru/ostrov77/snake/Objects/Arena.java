@@ -1,6 +1,5 @@
 package ru.ostrov77.snake.Objects;
 
-import com.destroystokyo.paper.entity.ai.Goal;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -9,7 +8,6 @@ import java.util.concurrent.TimeUnit;
 import java.io.File;
 import java.util.HashSet;
 import java.util.Set;
-
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -25,23 +23,18 @@ import org.bukkit.entity.Firework;
 import org.bukkit.inventory.meta.FireworkMeta;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
-
 import com.xxmicloxx.NoteBlockAPI.NBSDecoder;
 import com.xxmicloxx.NoteBlockAPI.RadioSongPlayer;
 import com.xxmicloxx.NoteBlockAPI.Song;
 import org.bukkit.DyeColor;
 import org.bukkit.entity.EntityType;
-import org.bukkit.entity.Mob;
 import ru.komiss77.ApiOstrov;
 import ru.komiss77.enums.Stat;
-import ru.komiss77.utils.ColorUtils;
-import ru.komiss77.utils.LocationUtil;
-
+import ru.komiss77.utils.TCUtils;
 import ru.ostrov77.snake.listener.GuiListener;
 import ru.ostrov77.snake.Main;
 import ru.ostrov77.snake.Manager.AM;
 import ru.ostrov77.snake.Manager.Files;
-import ru.ostrov77.snake.Manager.FollowGoal;
 import ru.ostrov77.snake.Manager.Shop;
 
 
@@ -284,7 +277,7 @@ public class Arena {
                     ApiOstrov.sendTitle(winner, "§aВы победили!", "§fСобирайте золото, это Ваша награда!",5,20,5);
                     winner.playSound(winner.getLocation(), Sound.BLOCK_ANVIL_FALL , 1.0F, 1.0F);
                     arenaLobby.getWorld().getPlayers().stream().forEach((p) -> {
-                        p.sendMessage("§f§oПобедитель: " +  ColorUtils.ChatColorfromDyeColor(GetSheepColor(winner_name))+winner_name+ " §f§o Выбил игроков: §b" + playerTracker.get(winner_name).kills +" §f§o!");
+                        p.sendMessage("§f§oПобедитель: " +  TCUtils.toChat(GetSheepColor(winner_name))+winner_name+ " §f§o Выбил игроков: §b" + playerTracker.get(winner_name).kills +" §f§o!");
                     });  
                     
                     this.EndGame = (new BukkitRunnable() {
@@ -562,7 +555,7 @@ public class Arena {
         
         for ( short i=0; i<100; i++) {
             
-            color = ColorUtils.randomDyeColor();
+            color = TCUtils.randomDyeColor();
             
             if( !this.SheepColor.containsValue(color)) {
                 this.SheepColor.put(nik, color);
@@ -596,13 +589,13 @@ public class Arena {
             
         } else if (state == GameState.WAITING || state == GameState.STARTING ) {
             
-            return ColorUtils.ChatColorfromDyeColor(GetSheepColor(p.getName()))+p.getName();
+            return TCUtils.toChat(GetSheepColor(p.getName()))+p.getName();
             
         } else if (playerTracker.containsKey(p.getName())) {
             
-            return "§2§o✔ "+ ColorUtils.ChatColorfromDyeColor(GetSheepColor(p.getName()))+p.getName();
+            return "§2§o✔ "+ TCUtils.toChat(GetSheepColor(p.getName()))+p.getName();
             
-        } else return "§4§o✖ "+ ColorUtils.ChatColorfromDyeColor(GetSheepColor(p.getName()))+p.getName();
+        } else return "§4§o✖ "+ TCUtils.toChat(GetSheepColor(p.getName()))+p.getName();
     }
     
     

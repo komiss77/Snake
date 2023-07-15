@@ -15,8 +15,9 @@ import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import ru.komiss77.ApiOstrov;
-import ru.komiss77.utils.ColorUtils;
+import ru.komiss77.modules.player.PM;
 import ru.komiss77.utils.ItemBuilder;
+import ru.komiss77.utils.TCUtils;
 import ru.ostrov77.snake.Main;
 import ru.ostrov77.snake.Manager.AM;
 
@@ -77,15 +78,15 @@ public class GuiListener implements Listener {
                 
                if ( itemName.equals (colorChoice.getItemMeta().getDisplayName())) {
                     e.setCancelled(true);
-                    if ( !ApiOstrov.hasGroup(p.getName(),"gamer") ) {
-                        p.sendMessage("§cУ вас не куплена привилегия Игроман!");
+                    if ( !PM.getOplayer(p).hasGroup("warior") ) {
+                        p.sendMessage("§cУ вас не куплена привилегия Воин!");
                         return;
                     }
                     Inventory inventory = Bukkit.createInventory( null, 18, colorChoice.getItemMeta().getDisplayName());
                     
-                    for (short col=0; col<=15; col++) {
+                    for (byte col=0; col<=15; col++) {
                         ItemStack is = new ItemStack(Material.WHITE_WOOL);
-                        is = ColorUtils.changeColor(is, col);
+                        is = TCUtils.changeColor(is, col);
                         inventory.addItem(is);
                     }
 
@@ -245,7 +246,7 @@ public class GuiListener implements Listener {
             AM.getPlayersArena(player).SetSheepColor( player.getName(), dc);
 
             //player.sendMessage("§fВаши овцы будут "+Main.EnumColor( itemstack.getData().getData() ) +"§lТАКОГО §fцвета!");
-            player.sendMessage("§fЦвет ваших овец будет "+ColorUtils.DyeToString(dc));
+            player.sendMessage("§fЦвет ваших овец будет "+TCUtils.dyeDisplayName(dc));
 
             player.closeInventory();
         }

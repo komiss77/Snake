@@ -13,6 +13,7 @@ import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 
 import ru.komiss77.ApiOstrov;
+import ru.komiss77.modules.player.PM;
 
 import ru.ostrov77.snake.Main;
 
@@ -87,7 +88,7 @@ public class Shop {
 
     
     public static boolean findPlayerInColorChooser(String nik) {
-        return ApiOstrov.hasGroup(nik,"gamer");
+        return PM.getOplayer(nik).hasGroup("warior");
      /*   Iterator iterator = Shop.colorChooser.entrySet().iterator();
 
         Entry entry;
@@ -126,7 +127,7 @@ public class Shop {
     
     public boolean purchaseColorChooser(Player player) {
        // if (Shop.economy == null) {
-            return ApiOstrov.hasGroup(player.getName(),"gamer");
+            return PM.getOplayer(player).hasGroup("warior");
        /* } else if (Shop.economy.getBalance(player) < (double) FileManager.priceColorChooser) {
             return false;
         } else {

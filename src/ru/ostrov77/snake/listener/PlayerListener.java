@@ -1,6 +1,5 @@
 package ru.ostrov77.snake.listener;
 
-import me.clip.deluxechat.DeluxeChat;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.Material;
@@ -45,6 +44,7 @@ import ru.komiss77.enums.Data;
 import ru.komiss77.events.BsignLocalArenaClick;
 import ru.komiss77.events.BungeeDataRecieved;
 import ru.komiss77.events.FriendTeleportEvent;
+import ru.komiss77.modules.player.Oplayer;
 import ru.komiss77.modules.player.PM;
 import ru.ostrov77.snake.Main;
 import ru.ostrov77.snake.Manager.AM;
@@ -180,8 +180,8 @@ public class PlayerListener implements Listener {
             public void run() {
                 switchLocalGlobal(p, true);
                 perWorldTabList(e.getPlayer());
-                if (PM.nameTagManager!=null && !e.getPlayer().getWorld().getName().equals("lobby")) {  
-                    PM.nameTagManager.setNametag(e.getPlayer(), "", "");
+                if (!e.getPlayer().getWorld().getName().equals("lobby")) {  
+                    PM.getOplayer(p).tag( "", "");
                 }
                 if (PM.exist(p.getName()))PM.getOplayer(p).score.getSideBar().reset();
             }
@@ -191,15 +191,16 @@ public class PlayerListener implements Listener {
 
     
     public static void switchLocalGlobal(final Player p, final boolean notify) {
+        final Oplayer op = PM.getOplayer(p);
         if (p.getWorld().getName().equalsIgnoreCase("lobby")) { //оказались в лобби, делаем глобальный
-            if ( DeluxeChat.isLocal(p.getUniqueId().toString()) ){
-                if (notify) p.sendMessage("§fЧат переключен на глобальный");
-                Ostrov.deluxechatPlugin.setGlobal(p.getUniqueId().toString());
+            if ( op.isLocalChat()){
+                if (notify) p.sendMessage("§8Чат переключен на Общий");
+                op.setLocalChat(false);//Ostrov.deluxechatPlugin.setGlobal(p.getUniqueId().toString());
             }
         } else {
-            if ( !DeluxeChat.isLocal(p.getUniqueId().toString()) )  {
-                if (notify) p.sendMessage("§fЧат переключен на Игровой");
-                Ostrov.deluxechatPlugin.setLocal(p.getUniqueId().toString());
+            if ( !op.isLocalChat() )  {
+                if (notify) p.sendMessage("§8Чат переключен на Арену");
+                op.setLocalChat(true);//Ostrov.deluxechatPlugin.setLocal(p.getUniqueId().toString());
             }
         }
     }
