@@ -1,4 +1,4 @@
-package ru.ostrov77.snake.listener;
+package ru.ostrov77.snake;
 
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
@@ -38,20 +38,12 @@ import org.bukkit.event.world.StructureGrowEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.scheduler.BukkitRunnable;
 import ru.komiss77.ApiOstrov;
-
-import ru.komiss77.Ostrov;
 import ru.komiss77.enums.Data;
 import ru.komiss77.events.BsignLocalArenaClick;
 import ru.komiss77.events.BungeeDataRecieved;
 import ru.komiss77.events.FriendTeleportEvent;
 import ru.komiss77.modules.player.Oplayer;
 import ru.komiss77.modules.player.PM;
-import ru.ostrov77.snake.Main;
-import ru.ostrov77.snake.Manager.AM;
-import ru.ostrov77.snake.Manager.Files;
-import ru.ostrov77.snake.Objects.Arena;
-import ru.ostrov77.snake.Objects.GameState;
-import ru.ostrov77.snake.Objects.Snake;
 
 
 
@@ -108,11 +100,9 @@ public class PlayerListener implements Listener {
     public void JoinToLobby (Player p) {
         if (!p.isOp()) p.setGameMode(GameMode.ADVENTURE);
         p.setFireTicks(0);
-        
         p.getInventory().clear();
         p.getInventory().setItem(7, GuiListener.toLobby);
         p.updateInventory();
-        
         p.teleport(Bukkit.getServer().getWorlds().get(0).getSpawnLocation());
     }
   

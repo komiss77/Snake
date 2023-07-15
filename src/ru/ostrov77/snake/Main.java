@@ -9,13 +9,6 @@ import org.bukkit.event.Listener;
 import org.bukkit.plugin.java.JavaPlugin;
 import ru.komiss77.ApiOstrov;
 import ru.komiss77.enums.GameState;
-import ru.ostrov77.snake.Manager.AM;
-import ru.ostrov77.snake.Manager.Commands;
-import ru.ostrov77.snake.Manager.Files;
-import ru.ostrov77.snake.Manager.ScoreBoard;
-import ru.ostrov77.snake.Manager.Shop;
-import ru.ostrov77.snake.listener.GuiListener;
-import ru.ostrov77.snake.listener.PlayerListener;
 
 
 

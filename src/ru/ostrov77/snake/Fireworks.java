@@ -1,4 +1,4 @@
-package ru.ostrov77.snake.Objects;
+package ru.ostrov77.snake;
 
 import java.util.Random;
 import org.bukkit.Color;

@@ -1,4 +1,4 @@
-package ru.ostrov77.snake.listener;
+package ru.ostrov77.snake;
 
 
 import org.bukkit.Bukkit;
@@ -18,8 +18,6 @@ import ru.komiss77.ApiOstrov;
 import ru.komiss77.modules.player.PM;
 import ru.komiss77.utils.ItemBuilder;
 import ru.komiss77.utils.TCUtils;
-import ru.ostrov77.snake.Main;
-import ru.ostrov77.snake.Manager.AM;
 
 
 
@@ -55,52 +53,164 @@ public class GuiListener implements Listener {
     public static void onRightClick(PlayerInteractEvent e) {
         Player p = e.getPlayer();
         final ItemStack item = e.getItem();
+        
+        if (AM.isInGame(e.getPlayer()) ) return;
 
 
-        
-        
-        
-            if (AM.isInGame(e.getPlayer()) ) return;
-        
-        
-            if (item == null || !item.hasItemMeta() ||  !item.getItemMeta().hasDisplayName() ) return;
+        if (item == null || !item.hasItemMeta() ||  !item.getItemMeta().hasDisplayName() ) return;
+
+        if (e.getAction() == Action.RIGHT_CLICK_AIR || e.getAction() == Action.RIGHT_CLICK_BLOCK) {
+
+        final String itemName = item.getItemMeta().getDisplayName();
+
+
+
+        if ( itemName.equals (exitGame.getItemMeta().getDisplayName())) {
+            e.setCancelled(true);
+            AM.GlobalPlayerExit(e.getPlayer());                    
+        }
+
+        if ( itemName.equals (colorChoice.getItemMeta().getDisplayName())) {
+            e.setCancelled(true);
+            if ( !PM.getOplayer(p).hasGroup("warior") ) {
+                p.sendMessage("§cУ вас не куплена привилегия Воин!");
+                return;
+            }
+             
+            Inventory inventory = Bukkit.createInventory( null, 18, colorChoice.getItemMeta().getDisplayName());
+
+            for (byte col=0; col<=15; col++) {
+                ItemStack is = new ItemStack(Material.WHITE_WOOL);
+                is = TCUtils.changeColor(is, col);
+                inventory.addItem(is);
+            }
+
+            p.openInventory(inventory);
+        }
+
+
+         if ( itemName.equals (toLobby.getItemMeta().getDisplayName())) {
+             e.setCancelled(true);
+             ApiOstrov.sendToServer(e.getPlayer(), "lobby0", "");
+         }                    
+
+            }
+
+    }
+    
+    
+  
+    
+    
+    @EventHandler(  priority = EventPriority.NORMAL, ignoreCancelled = true)
+    public void onInventoryClick(InventoryClickEvent e) {
+
+        Player player = (Player) e.getWhoClicked();
             
-            if (e.getAction() == Action.RIGHT_CLICK_AIR || e.getAction() == Action.RIGHT_CLICK_BLOCK) {
+        if (AM.isInGame(player)) {
+            e.setCancelled(true);
+            player.closeInventory();
+            return;
+        }
                 
+        final ItemStack item = e.getCurrentItem();
+
+        if (item.hasItemMeta() && item.getItemMeta().hasDisplayName()) {
             final String itemName = item.getItemMeta().getDisplayName();
+            if ( itemName.equals (exitGame.getItemMeta().getDisplayName()) ||
+                    itemName.equals (colorChoice.getItemMeta().getDisplayName()) ||
+                    itemName.equals (toLobby.getItemMeta().getDisplayName()) ) {
+                e.setCancelled(true);
+                return;
+            }
+        }
+        
+        
+        if ( item == null || item.getType() == null ) return;
+        
+                    
+        if ( e.getView().getTitle().equals("§aВыбор цвета") ) {
+            e.setCancelled(true);
+            if ( !item.getType().toString().endsWith("_WOOL") ) return;
+
+            DyeColor dc=DyeColor.valueOf( item.getType().toString().replace("_WOOL",""));
+
+            AM.getPlayersArena(player).SetSheepColor( player.getName(), dc);
+
+            //player.sendMessage("§fВаши овцы будут "+Main.EnumColor( itemstack.getData().getData() ) +"§lТАКОГО §fцвета!");
+            player.sendMessage("§fЦвет ваших овец будет "+TCUtils.dyeDisplayName(dc));
+
+            player.closeInventory();
+        }
 
                     
-                
-                if ( itemName.equals (exitGame.getItemMeta().getDisplayName())) {
-                    e.setCancelled(true);
-                    AM.GlobalPlayerExit(e.getPlayer());                    
-                }
-                
-               if ( itemName.equals (colorChoice.getItemMeta().getDisplayName())) {
-                    e.setCancelled(true);
-                    if ( !PM.getOplayer(p).hasGroup("warior") ) {
-                        p.sendMessage("§cУ вас не куплена привилегия Воин!");
-                        return;
-                    }
-                    Inventory inventory = Bukkit.createInventory( null, 18, colorChoice.getItemMeta().getDisplayName());
                     
-                    for (byte col=0; col<=15; col++) {
-                        ItemStack is = new ItemStack(Material.WHITE_WOOL);
-                        is = TCUtils.changeColor(is, col);
-                        inventory.addItem(is);
-                    }
+    }
+   
 
-                    p.openInventory(inventory);
-                }
-                
-                
-                if ( itemName.equals (toLobby.getItemMeta().getDisplayName())) {
-                    e.setCancelled(true);
-                    ApiOstrov.sendToServer(e.getPlayer(), "lobby0", "");
-                }                    
-                
-                
-                
+    
+    
+    
+    @EventHandler
+    public void cancelMove(InventoryDragEvent event) {
+        if ( ((Player) event.getWhoClicked()).isOp()) return;
+            event.setCancelled(true);
+            ((Player) event.getWhoClicked()).updateInventory();
+    }
+    
+    
+    
+    
+}
+
+
+   
+    
+
+
+
+
+
+
+    
+    
+    
+
+    /*
+    
+    public static void givePlayerNametag(Player player) {
+      //  if (Shop.findPlayerInColorChooser(player.getName())) {
+            ItemStack itemstack = new ItemStack(Material.NAME_TAG);
+            ItemMeta itemmeta = itemstack.getItemMeta();
+            itemmeta.setDisplayName("§aВыбор цвета");
+            itemstack.setItemMeta(itemmeta);
+            player.getInventory().setItem(5, itemstack);
+      //  }
+    }
+
+    public static void giveExitItem(Player player) {
+        //player.getInventory().setItem(0, null);
+        ItemStack itemstack = new ItemStack( Material.SLIME_BALL, 1 );
+        ItemMeta itemmeta = itemstack.getItemMeta();
+        itemmeta.setDisplayName("§c§lВыход");
+        itemstack.setItemMeta(itemmeta);
+        player.getInventory().setItem(8, itemstack);
+        //player.updateInventory();
+    }
+
+    
+    
+    public static void givePlayerShop(Player player) {
+        ItemStack itemstack = new ItemStack(Material.CHEST, 1);
+        ItemMeta itemmeta = itemstack.getItemMeta();
+        itemmeta.setDisplayName("§bМагазин");
+        itemstack.setItemMeta(itemmeta);
+        player.getInventory().setItem(7, itemstack);
+       // player.updateInventory();
+    }
+*/
+    
+                   
                  /*   
                 case "§bМагазин":
                     e.setCancelled(true);
@@ -161,97 +271,7 @@ public class GuiListener implements Listener {
                     break;
                     */
  
-
-            }
-
-    }
-    
-    
-    
-    
-    
-    
-    
-
-    /*
-    
-    public static void givePlayerNametag(Player player) {
-      //  if (Shop.findPlayerInColorChooser(player.getName())) {
-            ItemStack itemstack = new ItemStack(Material.NAME_TAG);
-            ItemMeta itemmeta = itemstack.getItemMeta();
-            itemmeta.setDisplayName("§aВыбор цвета");
-            itemstack.setItemMeta(itemmeta);
-            player.getInventory().setItem(5, itemstack);
-      //  }
-    }
-
-    public static void giveExitItem(Player player) {
-        //player.getInventory().setItem(0, null);
-        ItemStack itemstack = new ItemStack( Material.SLIME_BALL, 1 );
-        ItemMeta itemmeta = itemstack.getItemMeta();
-        itemmeta.setDisplayName("§c§lВыход");
-        itemstack.setItemMeta(itemmeta);
-        player.getInventory().setItem(8, itemstack);
-        //player.updateInventory();
-    }
-
-    
-    
-    public static void givePlayerShop(Player player) {
-        ItemStack itemstack = new ItemStack(Material.CHEST, 1);
-        ItemMeta itemmeta = itemstack.getItemMeta();
-        itemmeta.setDisplayName("§bМагазин");
-        itemstack.setItemMeta(itemmeta);
-        player.getInventory().setItem(7, itemstack);
-       // player.updateInventory();
-    }
-*/
-    
-    
-    
-    
-@EventHandler(  priority = EventPriority.NORMAL, ignoreCancelled = true)
-    public void onInventoryClick(InventoryClickEvent e) {
-
-        Player player = (Player) e.getWhoClicked();
-            
-        if (AM.isInGame(player)) {
-            e.setCancelled(true);
-            player.closeInventory();
-            return;
-        }
-                
-        final ItemStack item = e.getCurrentItem();
-
-        if (item.hasItemMeta() && item.getItemMeta().hasDisplayName()) {
-            final String itemName = item.getItemMeta().getDisplayName();
-            if ( itemName.equals (exitGame.getItemMeta().getDisplayName()) ||
-                    itemName.equals (colorChoice.getItemMeta().getDisplayName()) ||
-                    itemName.equals (toLobby.getItemMeta().getDisplayName()) ) {
-                e.setCancelled(true);
-                return;
-            }
-        }
-        
-        
-        if (e.getView()==null || e.getView().getTitle()==null || item == null || item.getType() == null ) return;
-        
-                    
-        if ( e.getView().getTitle().equals("§aВыбор цвета") ) {
-            e.setCancelled(true);
-            if ( !item.getType().toString().endsWith("_WOOL") ) return;
-
-            DyeColor dc=DyeColor.valueOf( item.getType().toString().replace("_WOOL",""));
-
-            AM.getPlayersArena(player).SetSheepColor( player.getName(), dc);
-
-            //player.sendMessage("§fВаши овцы будут "+Main.EnumColor( itemstack.getData().getData() ) +"§lТАКОГО §fцвета!");
-            player.sendMessage("§fЦвет ваших овец будет "+TCUtils.dyeDisplayName(dc));
-
-            player.closeInventory();
-        }
-
-        /*
+       /*
                 if (e.getView().getTitle().equals("§5Магазин")) {
                 e.setCancelled(true);
                     
@@ -370,27 +390,4 @@ public class GuiListener implements Listener {
                         }
                     }*/
                     
-                    
-                    
-                    
-    }
-   
-    
-    
-    
-    
-
-    
-    
-    
-@EventHandler
-    public void cancelMove(InventoryDragEvent event) {
-        if ( ((Player) event.getWhoClicked()).isOp()) return;
-            event.setCancelled(true);
-            ((Player) event.getWhoClicked()).updateInventory();
-    }
-    
-    
-    
-    
-}
+         

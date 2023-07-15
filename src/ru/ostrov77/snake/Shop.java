@@ -1,4 +1,4 @@
-package ru.ostrov77.snake.Manager;
+package ru.ostrov77.snake;
 
 import java.io.File;
 import java.io.IOException;

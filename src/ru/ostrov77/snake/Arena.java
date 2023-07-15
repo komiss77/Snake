@@ -1,4 +1,4 @@
-package ru.ostrov77.snake.Objects;
+package ru.ostrov77.snake;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -27,15 +27,11 @@ import com.xxmicloxx.NoteBlockAPI.NBSDecoder;
 import com.xxmicloxx.NoteBlockAPI.RadioSongPlayer;
 import com.xxmicloxx.NoteBlockAPI.Song;
 import org.bukkit.DyeColor;
+import org.bukkit.GameMode;
 import org.bukkit.entity.EntityType;
 import ru.komiss77.ApiOstrov;
 import ru.komiss77.enums.Stat;
 import ru.komiss77.utils.TCUtils;
-import ru.ostrov77.snake.listener.GuiListener;
-import ru.ostrov77.snake.Main;
-import ru.ostrov77.snake.Manager.AM;
-import ru.ostrov77.snake.Manager.Files;
-import ru.ostrov77.snake.Manager.Shop;
 
 
 public class Arena {
@@ -457,7 +453,8 @@ public class Arena {
         who.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, 60, 1));
         who.getWorld().playSound(who.getLocation(), Sound.ENTITY_DONKEY_ANGRY , 0.8f, 2.0f);
         ApiOstrov.sendTitle(who, "", "§4Вы проиграли!");
-        who.teleport(arenaLobby);
+        who.setGameMode(GameMode.SPECTATOR);//who.teleport(arenaLobby);
+        who.teleport(who.getLocation().add(0, 3, 0));
         ApiOstrov.addStat(who, Stat.SN_game);
         ApiOstrov.addStat(who, Stat.SN_loose);
         who.getInventory().clear();
@@ -477,32 +474,25 @@ public class Arena {
     
     
     public void addPlayers(Player p) {
-
-        if (!players.contains(p.getName())) {
-            players.add(p.getName());
+        if (players.add(p.getName())) {
             p.teleport(getArenaLobby());
             if (minPlayers>players.size()) SendAB ("§6Для старта нужно еще §b" + (minPlayers-players.size())+" §6чел.!" ); 
             p.getInventory().clear();
             p.getInventory().setItem(0, GuiListener.colorChoice);
             p.getInventory().setItem(8, GuiListener.exitGame);
-            //GuiListener.giveExitItem(p);
-            //GuiListener.givePlayerShop(p);
-            //GuiListener.givePlayerNametag(p);
             p.updateInventory();
-            //SignsListener.updateSigns(name, players.size(), maxplayers, getStateAsString(), playtime );
             Main.sendBsignChanel(name, "§2"+ arenaLobby.getWorld().getPlayers().size(), getStateAsString(), ru.komiss77.enums.GameState.ОЖИДАНИЕ, arenaLobby.getWorld().getPlayers().size());
             if ( players.size()>=minPlayers ) startCountdown();
-           } 
-
-        }
+        } 
+    }
 
     
     
     public void PlayerExit (final Player p) {
-        if (IsJonable()) {              //если waiting, starting
+        if (state == GameState.WAITING || state == GameState.STARTING) {              //если waiting, starting
         
-            if ( players.contains(p.getName()) ) {
-                players.remove(p.getName());
+            if ( players.remove(p.getName()) ) {
+                //players.remove(p.getName());
                     if (players.size() < minPlayers && CoolDown != null) {
                         CoolDown.cancel();
                         cdCounter = 30;
@@ -516,19 +506,19 @@ public class Arena {
             Main.sendBsignChanel(name, "§2"+ arenaLobby.getWorld().getPlayers().size(), getStateAsString(), ru.komiss77.enums.GameState.ОЖИДАНИЕ, arenaLobby.getWorld().getPlayers().size());
         
         } else {                //если игра
-        
-            if ( playerTracker.containsKey(p.getName()) ) {  //подстраховка
-                playerTracker.get(p.getName()).cancel();
-                playerTracker.remove(p.getName());
+            
+            final Snake s = playerTracker.remove(p.getName());
+            if ( s != null ) {  //подстраховка
+                s.cancel();
                 //SignsListener.updateSigns( getName(), playerTracker.size(), maxplayers, getStateAsString(), playtime );
                 Main.sendBsignChanel(name, "§2"+ arenaLobby.getWorld().getPlayers().size(), getStateAsString(), ru.komiss77.enums.GameState.ПЕРЕЗАПУСК, arenaLobby.getWorld().getPlayers().size());
                 //if ( playerTracker.size() ==1 ) endGame();   тут нельзя, или определит победиля при таймауте
             } 
-            if ( players.contains(p.getName()) ) players.remove(p.getName());
+            players.remove(p.getName());// players.remove(p.getName());
+            p.setGameMode(GameMode.ADVENTURE);
             p.teleport(Bukkit.getServer().getWorlds().get(0).getSpawnLocation());
+            
         }
-
-
 
 
     }

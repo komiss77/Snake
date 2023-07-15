@@ -1,4 +1,4 @@
-package ru.ostrov77.snake.Objects;
+package ru.ostrov77.snake;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -21,7 +21,7 @@ import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.util.BoundingBox;
 import org.bukkit.util.Vector;
 import ru.komiss77.Ostrov;
-import ru.ostrov77.snake.Manager.FollowGoal;
+import ru.ostrov77.snake.FollowGoal;
 
 
 
