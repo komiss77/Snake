@@ -143,7 +143,7 @@ public class Files {
            // List allspawn = new ArrayList();
             //String spawns;
             
-            for (Entry <String, Arena> e : AM.getAllArenas().entrySet()) {
+            for (Entry <String, Arena> e : AM.arenas.entrySet()) {
                 
                 arena = e.getValue();
                 
@@ -155,11 +155,11 @@ public class Files {
                     }
                 spawns = allspawn.toString().replaceAll("\\[|\\]|\\s", "");
                // ConfigurationSection cs = Files.customConfig.getConfigurationSection("AM." + arena.getName());
-                Files.customConfig.set( "Arenas." + arena.getName()+ ".arenaLobby" , Utils.locToString(arena.getArenaLobby()) );
-                Files.customConfig.set( "Arenas." + arena.getName()+ ".boundsLow" , Utils.locToString(arena.getBoundsLow()) );
-                Files.customConfig.set( "Arenas." + arena.getName()+ ".boundsHigh", Utils.locToString(arena.getBoundsHigh()) );
-                Files.customConfig.set( "Arenas." + arena.getName()+ ".spawns", spawns);
-                Files.customConfig.set( "Arenas." + arena.getName()+ ".minPlayers", arena.getMinPlayers() );
+                Files.customConfig.set( "Arenas." + arena.arenaName+ ".arenaLobby" , Utils.locToString(arena.getArenaLobby()) );
+                Files.customConfig.set( "Arenas." + arena.arenaName+ ".boundsLow" , Utils.locToString(arena.getBoundsLow()) );
+                Files.customConfig.set( "Arenas." + arena.arenaName+ ".boundsHigh", Utils.locToString(arena.getBoundsHigh()) );
+                Files.customConfig.set( "Arenas." + arena.arenaName+ ".spawns", spawns);
+                Files.customConfig.set( "Arenas." + arena.arenaName+ ".minPlayers", arena.getMinPlayers() );
                
             }
                 //cs.set( ".arenaLobby" , Utils.locToString(arena.getArenaLobby()) );

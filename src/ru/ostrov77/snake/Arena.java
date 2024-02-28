@@ -6,8 +6,6 @@ import java.util.List;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
 import java.io.File;
-import java.util.HashSet;
-import java.util.Set;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -17,51 +15,60 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
-import org.bukkit.Color;
-import org.bukkit.FireworkEffect;
-import org.bukkit.entity.Firework;
-import org.bukkit.inventory.meta.FireworkMeta;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import com.xxmicloxx.NoteBlockAPI.NBSDecoder;
 import com.xxmicloxx.NoteBlockAPI.RadioSongPlayer;
 import com.xxmicloxx.NoteBlockAPI.Song;
+import net.kyori.adventure.text.Component;
 import org.bukkit.DyeColor;
-import org.bukkit.GameMode;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
+import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.util.Vector;
 import ru.komiss77.ApiOstrov;
+import ru.komiss77.enums.Game;
+import ru.komiss77.enums.GameState;
 import ru.komiss77.enums.Stat;
+import ru.komiss77.modules.player.Oplayer;
+import ru.komiss77.modules.player.PM;
+import ru.komiss77.scoreboard.SideBar;
+import ru.komiss77.utils.DonatEffect;
+import ru.komiss77.utils.ItemUtils;
 import ru.komiss77.utils.TCUtils;
+import ru.ostrov77.minigames.IArena;
+import ru.ostrov77.minigames.MG;
+import ru.ostrov77.minigames.MiniGamesLst;
 
+public class Arena implements IArena {
 
-public class Arena {
-
-    private String name;
-    private Location boundsLow,boundsHigh,arenaLobby;
-    private GameState state=GameState.WAITING;;
-    private RadioSongPlayer songPlayer;    
-    private Random random = new Random();;
-    private BukkitTask SugarTask,CoolDown,PreStart,GameTimer,EndGame;
-    
-    private HashMap <String,DyeColor> SheepColor = new HashMap();
-    public HashMap<String,Snake> playerTracker = new HashMap();
-    private List<Item> sugars = new ArrayList();
+    public String arenaName;
+    public Location boundsLow, boundsHigh, arenaLobby;
+    public GameState state = GameState.ОЖИДАНИЕ;
     private List<Location> spawns = new ArrayList();
-    private Set<String> players = new HashSet<>();
     
-    private int minPlayers,maxplayers;
-    private int cdCounter=30;//ожид в лобби арены
-    private int prestart=7;//ожид сидя на овцах
-    private int playtime,pickupGold=0;
-    private int ending=20;//салюты,награждения
+    private RadioSongPlayer songPlayer;
+    private Random random = new Random();
     
-    private boolean canreset=true;
+    private BukkitTask task;
+
+    private HashMap<String, DyeColor> SheepColor = new HashMap();
+    public HashMap<String, Snake> players = new HashMap();
+
+    private int minPlayers, maxplayers;
+    private int cdCounter = 30;//ожид в лобби арены
+    private int prestart = 7;//ожид сидя на овцах
+    private int gameTime = 150;
+    public int pickupGold = 0;
+    private int ending = 20;//салюты,награждения
+    //private boolean soloMode;
+
     
-    
-    
-    public Arena( final List spawns, final String name, final Location arenaLobby, final Location boundsLow, final Location boundsHigh, final int minPlayers ) {
-        if (AM.ArenaExist(name)) return; //не создаём дубль!!
-        this.name = name;
+    public Arena(final List spawns, final String name, final Location arenaLobby, final Location boundsLow, final Location boundsHigh, final int minPlayers) {
+        if (AM.ArenaExist(name)) {
+            return; //не создаём дубль!!
+        }
+        this.arenaName = name;
         this.spawns = spawns;
         this.maxplayers = spawns.size();
         this.minPlayers = minPlayers;
@@ -69,640 +76,425 @@ public class Arena {
         this.boundsLow = boundsLow;
         this.boundsHigh = boundsHigh;
     }
-
     
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
- 
- 
-    
-    public void startCountdown() {                            //ожидание в лобби
-            if (getState() != GameState.WAITING) return;
-            setState(GameState.STARTING);
-
-            SendTitle("§aЗмейка стартует через", "§b"+cdCounter+" сек.!");
-
-            this.CoolDown = (new BukkitRunnable() {
-                @Override
-                public void run() {
-
-                    if (cdCounter == 0) {
-                            Arena.this.cdCounter = 30;
-                            this.cancel();
-                            PrepareToStart();
-
-                    } else if ( players.size() < minPlayers ) {
-                        SendAB("§d§lНедостаточно участников, счётчик остановлен.");
-                        setState(GameState.WAITING);
-                        Arena.this.cdCounter = 30;
-                        this.cancel();
-
-                    } else if ( players.size() == maxplayers && cdCounter > 10 ) {
-                        SendAB("§2§lВремя до старта игры уменьшено!");
-                        cdCounter = 10;
-
-                    } else if (cdCounter > 0) {
-                            --cdCounter;
-                            Main.sendBsignChanel(name, "§6Игроки: §2"+ arenaLobby.getWorld().getPlayers().size(), getStateAsString()+" §4"+cdCounter, ru.komiss77.enums.GameState.СТАРТ, arenaLobby.getWorld().getPlayers().size());
-                            SendAB("§eДо старта: §f"+cdCounter);
-                            if (cdCounter <= 5 && cdCounter > 0) {
-                                SendTitle("§b"+cdCounter+" !", "");
-                                SendSound(Sound.BLOCK_COMPARATOR_CLICK);
-                            }
-                    } 
-
-                }
-            }).runTaskTimer(Main.getInstance(), 0L, 20L);
-        }
-
-
-
-    public void ForceStart() {
-         if (getState() != GameState.STARTING) return;
-            if (CoolDown != null && cdCounter>3)  cdCounter=3;
-           // PrepareToStart();
-        }
-
-
-
-
-
-    
-    public void PrepareToStart() {
-        if (getState() != GameState.STARTING) return;
-        setState(GameState.STARTED);
-        if (this.CoolDown != null)  this.CoolDown.cancel();
-
-        StartMusic();
-
-            //for (int i=0; i<players.size(); i++) {                      //распределение игроков по спавнам
-            int i=0;
-            for (Player p:getPlayers()) {                      //распределение игроков по спавнам
-//Bukkit.broadcastMessage("§ePrepareToStart"+p.getName());
-                //Player p = players.get(i);
-               // if (p!=null && p.isOnline()) {
-                    p.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, 5, 1), true);
-                    p.teleport(this.spawns.get(i));
-                    i++;
-
-                    p.getInventory().clear();
-
-                    GenSheepColor(p.getName());        //генерируем цвет
-
-                    playerTracker.put(p.getName(), new Snake(p, GetSheepColor(p.getName()), this) );
-
-                    if (Shop.selected.containsKey(p.getUniqueId())) {
-                        if (((String) Shop.selected.get(p.getUniqueId())).contains("fastsnake"))   p.getInventory().setItem(0, new ItemStack(Material.FEATHER, Files.fastKitBoosts));
-                        if (((String) Shop.selected.get(p.getUniqueId())).contains("ferrarisnake"))   p.getInventory().setItem(0, new ItemStack(Material.FEATHER, Files.ferrariKitBoosts));
-                    }
-
-               // } else {
-               //     PlayerExit(p);
-               // }
-            }
-
-            SendSound(Sound.ENTITY_SHEEP_AMBIENT);
-
-
-                this.PreStart = (new BukkitRunnable() {
-                @Override
-                public void run() {
-
-                        if ( players.isEmpty() && canreset ) resetGame();
-
-                            if ( players.size() < minPlayers ) {
-                                Arena.this.SendAB("§d§lСлишкома мало игроков, отмена.");
-                                this.cancel();
-                                if (canreset) Arena.this.resetGame();
-
-                            } else if (Arena.this.prestart==0) {
-                                Arena.this.prestart = 7;
-                                this.cancel();
-                                GameProgress();
-
-                            } else {
-                                SendAB("§aОвцы заправляются... Осталось §b"+prestart+" §aсекунд!");
-                                --Arena.this.prestart;
-                            }
-
-
-
-                }
-                }).runTaskTimer(Main.getInstance(), 0L, 20L);
-        }
-    
-   
-
-    public void GameProgress() {
-        if (getState() != GameState.STARTED) return;
-        setState(GameState.INGAME);
-        if (this.PreStart != null)  this.PreStart.cancel();
-
-
-        startSugarSpawn();
-
-        SendAB("§6ПОЕХАЛИ! §aПОЕХАЛИ! §bПОЕХАЛИ!");
-
-
-            this.GameTimer = (new BukkitRunnable() {
-                @Override
-                public void run() {
-
-//for (Snake sn : playerTracker.values()) {
-   // Mob mob = (Mob) sn.masterSheep;
-    //boolean has = Bukkit.getMobGoals().hasGoal(mob, FollowGoal.key);
-    //Bukkit.broadcastMessage("-> snake:"+sn.name+" goal size="+Bukkit.getMobGoals().getAllGoals(mob).size());
-    //for( Goal g : Bukkit.getMobGoals().getAllGoals(mob)) {
-        //Bukkit.broadcastMessage(""+g.getKey().getNamespacedKey()+" "+g.getTypes().toString());
-        //Bukkit.broadcastMessage(mob.getPathfinder().hasPath() ? ("getFinalPoint="+LocationUtil.StringFromLoc(mob.getPathfinder().getCurrentPath().getFinalPoint())) : "!hasPath" );
-    //}
-    //Bukkit.broadcastMessage("");
-//}
-                    if ( playerTracker.isEmpty() || playtime > 150 && canreset) {
-                        SendTitle("Время вышло!", "Игра окончена!");
-                        endGame(true);//resetGame();
-                    } else if (playerTracker.size()==1) {
-                            this.cancel();
-                            endGame(false);
-                    }
-
-                    playtime++;
-                    //SignsListener.updateSigns( getName(), 1, players.size(), getStateAsString(), playtime );
-                    Main.sendBsignChanel(name, getStateAsString(), "§6Игроки: §2"+ players.size(), ru.komiss77.enums.GameState.ИГРА, arenaLobby.getWorld().getPlayers().size()); 
-                }
-            }).runTaskTimer(Main.getInstance(), 0L, 20L);
-
-    }
-
-
-
-
-
-
-    public void endGame(final boolean timeOut) {   
-        if (getState() != GameState.INGAME) return;
-        state=GameState.ENDING;
-        if (GameTimer != null)  GameTimer.cancel();
-
-        //SignsListener.updateSigns( getName(), 1, maxplayers, getStateAsString(), playtime );
-        Main.sendBsignChanel(getName(), "§1 - / -", getStateAsString(), ru.komiss77.enums.GameState.ФИНИШ, arenaLobby.getWorld().getPlayers().size());
-        
-      //  try {
-            final String winner_name = playerTracker.keySet().stream().findFirst().get();
-            if (!timeOut && winner_name!=null && !winner_name.isEmpty()) {
-                
-                final Player winner = Bukkit.getPlayerExact(winner_name);
-                if (winner!=null) {
-                    
-                    playerTracker.get(winner_name).cancel();
-                    ApiOstrov.sendTitle(winner, "§aВы победили!", "§fСобирайте золото, это Ваша награда!",5,20,5);
-                    winner.playSound(winner.getLocation(), Sound.BLOCK_ANVIL_FALL , 1.0F, 1.0F);
-                    arenaLobby.getWorld().getPlayers().stream().forEach((p) -> {
-                        p.sendMessage("§f§oПобедитель: " +  TCUtils.toChat(GetSheepColor(winner_name))+winner_name+ " §f§o Выбил игроков: §b" + playerTracker.get(winner_name).kills +" §f§o!");
-                    });  
-                    
-                    this.EndGame = (new BukkitRunnable() {
-                        @Override
-                        public void run() {
-
-                            if (ending > 5) SendAB("§5Собрано: §4"+pickupGold+"  §6Времени осталось: §b"+(ending-5) );
-
-                            if (ending > 5 && ending <= 10 ) {
-                                SendSound(Sound.BLOCK_COMPARATOR_CLICK);
-                            } 
-
-                            if (ending == 6) winner.addPotionEffect(new PotionEffect(PotionEffectType.LEVITATION, 130, 0));
-
-                            if (ending == 5) {
-                                winner.sendMessage("§fСлитков собрано: §b"+pickupGold+" §f!" );
-                                //winner.sendMessage("§fВы получаете на счёт §6"+pickupGold*10+" §fр.!" );
-                                ApiOstrov.addStat(winner, Stat.SN_game);
-                                ApiOstrov.addStat(winner, Stat.SN_win);
-                                //for (int g=0; g<pickupGold;g++) {
-                                    ApiOstrov.addStat(winner, Stat.SN_gold, pickupGold);
-                                //}
-                                //ApiOstrov.moneyChange(winner, pickupGold*10, "Змейка, собрано слитков: "+pickupGold);
-                                firework(winner);
-                            }
-
-                            if (ending <=0) {
-                                 this.cancel();
-                                 resetGame();
-                            }
-
-                            --ending;
-                        }
-                    }).runTaskTimer(Main.getInstance(), 0L, 20L);    
-                    
-                } else {
-                    resetGame();
-                }
-                
+    public void resetGame() {
+        if (state==GameState.ОЖИДАНИЕ) return;
+        if (task != null)   task.cancel();
+        arenaLobby.getWorld().getEntities().stream().forEach(e -> {
+            if (e.getType() == EntityType.PLAYER) {
+                ((Player) e).addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, 10, 1));
+                removePlayer((Player) e);
             } else {
-                resetGame();
+                e.remove();
             }
- 
-
-
-
-    }
-
-
-
-
-
-    public void resetGame() {  
-
-        StopMusic();
-
-        canreset=false;
-        if (CoolDown != null)  CoolDown.cancel();
-        if (EndGame != null)  EndGame.cancel();
-        if (PreStart != null)  PreStart.cancel();
-        if (GameTimer != null)  GameTimer.cancel();
-        if (SugarTask != null)  SugarTask.cancel(); 
-
-
-        try { sugars.stream().forEach((sugar) -> { sugar.remove();}); } catch (NullPointerException e) {}     //убираем сахар
-
-        arenaLobby.getWorld().getPlayers().stream().forEach((p) -> { p.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, 10, 1), true); });
-        //this.arenaLobby.getWorld().getPlayers().stream().forEach((p) -> { p.teleport(Bukkit.getServer().getWorlds().get(0).getSpawnLocation()); });
-        arenaLobby.getWorld().getPlayers().stream().forEach((p) -> { PlayerExit(p); });
-        arenaLobby.getWorld().getEntities().stream().forEach( (e) -> { 
-            if (e.getType()!=EntityType.PLAYER) e.remove();   
-        }
-        );
-
-        sugars.clear();
-        playerTracker.clear();
+        });
+        players.values().stream().forEach( sn -> {
+            if (sn!=null) sn.stop(false);
+        });
         players.clear();
         SheepColor.clear();
-
-
-        cdCounter=30;
+        cdCounter = 30;
         prestart = 7;
-        playtime = 0;
-        ending=20;
+        gameTime = 150;
+        ending = 20;
         pickupGold = 0;
-
-        setState(GameState.WAITING);
-        canreset=true;
         StopMusic();
-        Main.sendBsignMysql(name, getStateAsString(), "", ru.komiss77.enums.GameState.ОЖИДАНИЕ, 0);
+        state = GameState.ОЖИДАНИЕ;
+        Main.sendBsignMysql(arenaName, state.displayColor+state.name(), "", state, 0);
     }
-
     
- 
-
-
-
-
-
-
-
-
-
-
-
-
     
-    private void startSugarSpawn() {
-        SugarTask = (new BukkitRunnable() {
+    public void startCountdown() {                            //ожидание в лобби
+        if (state != GameState.ОЖИДАНИЕ)  return;
+        state = GameState.СТАРТ;
+
+        SendTitle("§aЗмейка стартует через", "§b" + cdCounter + " сек.!");
+
+        task = (new BukkitRunnable() {
             @Override
             public void run() {
-                if ( state == GameState.INGAME) {
-                    int i = random.nextInt(Files.chanceOfSugerSpawning);
 
-                    if (i == 0 && sugars.size() < Files.maxSugarOnGround) {
-                        int j;
+                if (cdCounter == 0) {
+                    cdCounter = 30;
+                    this.cancel();
+                    PrepareToStart();
 
-                        if (boundsLow.getBlockX() > boundsHigh.getBlockX()) {
-                            j = ApiOstrov.randInt(boundsHigh.getBlockX(), boundsLow.getBlockX());
-                        } else {
-                            j = ApiOstrov.randInt(boundsLow.getBlockX(), boundsHigh.getBlockX());
+                }  else if (cdCounter > 0) {
+                    --cdCounter;
+                    Main.sendBsignChanel(arenaName, 
+                            "§6Игроки: §2" + players.size(), state.displayColor + state.name() + " §4" + cdCounter, state, players.size());
+                    Oplayer op;
+                    for (Player p : getPlayers()) {
+                        op = PM.getOplayer(p);
+                        op.score.getSideBar().setTitle("§6До старта: §b"+(cdCounter+7));
+                        if (cdCounter <= 5 ) {
+                            p.playSound(p.getEyeLocation(), Sound.BLOCK_COMPARATOR_CLICK, 5.0F, 5.0F);
                         }
-
-                        int k = ((Location) spawns.get(0)).getBlockY() + 1;
-                        int l;
-
-                        if (boundsLow.getBlockZ() > boundsHigh.getBlockZ()) {
-                            l = ApiOstrov.randInt(boundsHigh.getBlockZ(), boundsLow.getBlockZ());
-                        } else {
-                            l = ApiOstrov.randInt(boundsLow.getBlockZ(), boundsHigh.getBlockZ());
-                        }
-
-                        Item item = arenaLobby.getWorld().dropItemNaturally(new Location(arenaLobby.getWorld(), (double) j, (double) k, (double) l), new ItemStack(Material.SUGAR, 1));
-
-                        sugars.add(item);
                     }
+                }
 
-                } else  this.cancel();
             }
         }).runTaskTimer(Main.getInstance(), 0L, 20L);
     }
 
-  
-    public boolean UseSugar (Item sugar) {
-        if (sugars.contains(sugar)) {
-            sugars.remove(sugar);
-            return true;
-        } else return false;
-    }
-    
-    
-    
-    
-    
-
-    
- 
-    
-    
-    
-    
-    public void Collide (final Player who, final String snakeOwner) {
-
-        if ( who.getName().equals(snakeOwner) ) {
-                SendAB( "§"+SheepColor.get(who.getName())+snakeOwner+" §a6наступил себе на хвост!");
-            } else {
-                SendAB( "§"+SheepColor.get(snakeOwner)+snakeOwner+" §a6врезался в §"+SheepColor.get(who.getName())+who.getName()+"§a!");
-            }
-        //LoosePlayer(loose);
-            
-        if ( playerTracker.containsKey(who.getName()) ) {
-            playerTracker.get(who.getName()).cancel();
-            playerTracker.remove(who.getName());
-            if ( playerTracker.size() ==1 ) endGame(false);  
+    public void forceStart(Player p) {
+        if (state!=GameState.СТАРТ) {
+            p.sendMessage("§cYou can't start an arena - arena must have state СТАРТ!");
+            return;
         }
-                
-        who.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, 60, 1));
-        who.getWorld().playSound(who.getLocation(), Sound.ENTITY_DONKEY_ANGRY , 0.8f, 2.0f);
-        ApiOstrov.sendTitle(who, "", "§4Вы проиграли!");
-        who.setGameMode(GameMode.SPECTATOR);//who.teleport(arenaLobby);
-        who.teleport(who.getLocation().add(0, 3, 0));
-        ApiOstrov.addStat(who, Stat.SN_game);
-        ApiOstrov.addStat(who, Stat.SN_loose);
-        who.getInventory().clear();
-        who.getInventory().setItem(8, GuiListener.exitGame);
-        who.updateInventory();
-        
-        //if ( playerTracker.size() ==1 ) endGame();    
-
+        if (task != null && cdCounter > 3) {
+            cdCounter = 3;
+        }
+        p.sendMessage("§bВремя до старта уменьшено");
     }
 
+    public void PrepareToStart() {
+        if (state != GameState.СТАРТ)  return;
+        state = GameState.ЭКИПИРОВКА;
+        if (task != null)  task.cancel();
+        
+        StartMusic();
 
+        int i = 0;
+        for (Player p : getPlayers()) {
+            p.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, 5, 1));
+            p.teleport(spawns.get(i));
+            i++;
 
-
-
-   
-    
-    
-    
-    public void addPlayers(Player p) {
-        if (players.add(p.getName())) {
-            p.teleport(getArenaLobby());
-            if (minPlayers>players.size()) SendAB ("§6Для старта нужно еще §b" + (minPlayers-players.size())+" §6чел.!" ); 
             p.getInventory().clear();
-            p.getInventory().setItem(0, GuiListener.colorChoice);
-            p.getInventory().setItem(8, GuiListener.exitGame);
-            p.updateInventory();
-            Main.sendBsignChanel(name, "§2"+ arenaLobby.getWorld().getPlayers().size(), getStateAsString(), ru.komiss77.enums.GameState.ОЖИДАНИЕ, arenaLobby.getWorld().getPlayers().size());
-            if ( players.size()>=minPlayers ) startCountdown();
-        } 
-    }
+            generateColor(p.getName()); //генерируем цвет
 
-    
-    
-    public void PlayerExit (final Player p) {
-        if (state == GameState.WAITING || state == GameState.STARTING) {              //если waiting, starting
-        
-            if ( players.remove(p.getName()) ) {
-                //players.remove(p.getName());
-                    if (players.size() < minPlayers && CoolDown != null) {
-                        CoolDown.cancel();
-                        cdCounter = 30;
-                        SendAB("§d§lНедостаточно участников, счётчик остановлен.");
-                        setState(GameState.WAITING);
-                    }
+            players.put(p.getName(), new Snake(p, getColor(p.getName()), this));
+
+            if (Shop.selected.containsKey(p.getUniqueId())) {
+                if (((String) Shop.selected.get(p.getUniqueId())).contains("fastsnake")) {
+                    p.getInventory().setItem(0, new ItemStack(Material.FEATHER, Files.fastKitBoosts));
+                }
+                if (((String) Shop.selected.get(p.getUniqueId())).contains("ferrarisnake")) {
+                    p.getInventory().setItem(0, new ItemStack(Material.FEATHER, Files.ferrariKitBoosts));
+                }
             }
-            //Utils.sendActionBar(p, "§fВы вышли с арены!");
-            p.teleport(Bukkit.getServer().getWorlds().get(0).getSpawnLocation());
-            //SignsListener.updateSigns( getName(), players.size(), maxplayers, getStateAsString(), playtime );
-            Main.sendBsignChanel(name, "§2"+ arenaLobby.getWorld().getPlayers().size(), getStateAsString(), ru.komiss77.enums.GameState.ОЖИДАНИЕ, arenaLobby.getWorld().getPlayers().size());
-        
-        } else {                //если игра
-            
-            final Snake s = playerTracker.remove(p.getName());
-            if ( s != null ) {  //подстраховка
-                s.cancel();
-                //SignsListener.updateSigns( getName(), playerTracker.size(), maxplayers, getStateAsString(), playtime );
-                Main.sendBsignChanel(name, "§2"+ arenaLobby.getWorld().getPlayers().size(), getStateAsString(), ru.komiss77.enums.GameState.ПЕРЕЗАПУСК, arenaLobby.getWorld().getPlayers().size());
-                //if ( playerTracker.size() ==1 ) endGame();   тут нельзя, или определит победиля при таймауте
-            } 
-            players.remove(p.getName());// players.remove(p.getName());
-            p.setGameMode(GameMode.ADVENTURE);
-            p.teleport(Bukkit.getServer().getWorlds().get(0).getSpawnLocation());
-            
+            p.playSound(p.getEyeLocation(), Sound.ENTITY_SHEEP_AMBIENT, 2, 2);
+        }
+        //soloMode = players.size()==1;
+
+        task = (new BukkitRunnable() {
+            @Override
+            public void run() {
+                if (players.isEmpty()) {
+                    resetGame();
+                }
+                
+                if (prestart == 0) {
+                    prestart = 7;
+                    this.cancel();
+                    GameProgress();
+
+                } else {
+                    Oplayer op;
+                    for (Player p : getPlayers()) {
+                        op = PM.getOplayer(p);
+                        op.score.getSideBar().setTitle("§6До старта: §b"+prestart);
+                        ApiOstrov.sendActionBarDirect(p, "§aОвцы готовятся к забегу : §b" + prestart + " §aсек.!");
+                    }
+                    --prestart;
+                }
+                
+            }
+        }).runTaskTimer(Main.getInstance(), 0L, 20L);
+    }
+
+    
+    public void GameProgress() {
+        if (state != GameState.ЭКИПИРОВКА)  return;
+        state = GameState.ИГРА;
+        if (task != null)  task.cancel();
+
+        task = (new BukkitRunnable() {
+            @Override
+            public void run() {
+                if (gameTime==0) {
+                    this.cancel();
+                    SendTitle("", "Игра окончена!");
+                    endGame(true); 
+                    return;
+                } else if (players.isEmpty()) {
+                    this.cancel();
+                    resetGame();
+                    return;
+                }
+
+                gameTime--;
+                if (gameTime%5==0) {
+                    spawnSugar();
+                }
+                
+                final String time = "§b§l" + getTime(gameTime);
+                
+                Main.sendBsignChanel(arenaName, time, "§6Игроки: §2" + players.size(), state, players.size());
+                
+                Oplayer op;
+                Snake sn;
+                for (Player p : getPlayers()) {
+                    op = PM.getOplayer(p);
+                    sn = players.get(p.getName());
+                    SideBar sb = op.score.getSideBar().setTitle(time);
+                    for (String name : players.keySet()) {
+                        if (sn!=null) {
+                            sb.update(name, getChatColor(name) + name + " §f"+sn.playerSheep.size());
+                        }
+                    }
+                    ApiOstrov.sendActionBarDirect(p, "§6ПОЕХАЛИ! §aПОЕХАЛИ! §bПОЕХАЛИ!");
+                }
+            }
+        }).runTaskTimer(Main.getInstance(), 0L, 20L);
+
+    }
+
+
+
+    private void spawnSugar() {
+        int ammount = 0;
+        for (Entity e : arenaLobby.getWorld().getEntities()) {
+            if (e.getType() != EntityType.PLAYER && e.getTicksLived() > 300) {
+                e.remove();
+            }
+            if (e.getType() == EntityType.DROPPED_ITEM) {
+                ammount++;
+            }
+        }
+        for (int i = ammount; i < 10; i++) {
+            final ItemStack is = new ItemStack(Material.SUGAR, 1);// AM.bonus.clone();
+            final ItemMeta im = is.getItemMeta();
+            im.displayName(Component.text(String.valueOf(random.nextInt(999))));
+            is.setItemMeta(im);
+            Item item = arenaLobby.getWorld().dropItem(randomFielldLoc(), is);
+            item.setVelocity(new Vector(0, 0, 0));
+            item.setPickupDelay(1);
+            item.setGravity(false);
+        }
+    }
+
+    private Location randomFielldLoc() {
+        int x, y, z;
+        if (boundsLow.getBlockX() > boundsHigh.getBlockX()) {
+            x = ApiOstrov.randInt(boundsHigh.getBlockX(), boundsLow.getBlockX());
+        } else {
+            x = ApiOstrov.randInt(boundsLow.getBlockX(), boundsHigh.getBlockX());
+        }
+        y = ((Location) spawns.get(0)).getBlockY() + 1;
+        if (boundsLow.getBlockZ() > boundsHigh.getBlockZ()) {
+            z = ApiOstrov.randInt(boundsHigh.getBlockZ(), boundsLow.getBlockZ());
+        } else {
+            z = ApiOstrov.randInt(boundsLow.getBlockZ(), boundsHigh.getBlockZ());
+        }
+        return new Location(arenaLobby.getWorld(), (double) x, (double) y, (double) z);
+    }
+
+    
+    //либо остался один на поле после столкновений, либо вышло время и все победили
+    public void endGame(final boolean timeOut) {
+        if (state != GameState.ИГРА)  return;
+        state = GameState.ФИНИШ;
+        if (task != null) task.cancel();
+
+        Main.sendBsignChanel(arenaName, "§1 - / -", state.displayColor+state.name(), state, players.size());
+
+        final boolean drop = timeOut || (!timeOut && players.size()==1);
+        for (Player winner : getPlayers()) {
+            final Snake sn = players.get(winner.getName());
+            if (sn!=null) {
+                sn.stop(drop);
+            }
+            if (drop) {
+                ApiOstrov.sendTitle(winner, "§aВы победили!", "§fСобирайте монеты, это Ваша награда!", 5, 20, 5);
+                winner.playSound(winner.getEyeLocation(), Sound.BLOCK_ANVIL_FALL, 1.0F, 1.0F);
+            }
         }
 
+        task = (new BukkitRunnable() {
+            @Override
+            public void run() {
+
+                if (ending > 5) {
+                    SendAB("§5Собрано: §4" + pickupGold + "  §6Времени осталось: §b" + (ending - 5));
+                }
+
+                if (ending > 5 && ending <= 10) {
+                    SendSound(Sound.BLOCK_COMPARATOR_CLICK);
+                }
+
+
+                if (ending<=6) {
+                    for (Player winner : getPlayers()) {
+                        if (ending == 6) {
+                            winner.addPotionEffect(new PotionEffect(PotionEffectType.LEVITATION, 130, 0));
+                        }
+                        if (ending <= 5) {
+                            DonatEffect.spawnRandomFirework(winner.getEyeLocation());
+                        }
+                        if (ending == 5) {
+                            winner.sendMessage("§fМонет собрано: §b" + winner.getLevel() + " §f!");
+                            ApiOstrov.addStat(winner, Stat.SN_game);
+                            ApiOstrov.addStat(winner, Stat.SN_win);
+                            ApiOstrov.addStat(winner, Stat.SN_gold, winner.getLevel());
+                            winner.setLevel(0);
+                        }
+                    }
+                }
+
+                if (ending <= 0) {
+                    this.cancel();
+                    resetGame();
+                }
+
+                --ending;
+            }
+        }).runTaskTimer(Main.getInstance(), 0L, 20L);
+
+        //final String winner_name = players.keySet().stream().findFirst().get();
+     //   if (!timeOut && winner_name != null) {
+
+            //Player winner = Bukkit.getPlayerExact(winner_name);
+            //if (winner != null) {
+
+                //playerTracker.get(winner_name).cancel();
+               // ApiOstrov.sendTitle(winner, "§aВы победили!", "§fСобирайте золото, это Ваша награда!", 5, 20, 5);
+                //winner.playSound(winner.getEyeLocation(), Sound.BLOCK_ANVIL_FALL, 1.0F, 1.0F);
+                //arenaLobby.getWorld().getPlayers().stream().forEach((p) -> {
+                //    p.sendMessage("§f§oПобедитель: " + TCUtils.toChat(getColor(winner_name)) + winner_name + " §f§o Выбил игроков: §b" + playerTracker.get(winner_name).kills + " §f§o!");
+                //});
+
+       //     } else {
+         //       resetGame();
+          //  }
+
+       // } else {
+       //     resetGame();
+       // }
 
     }
 
 
-    
 
-    
-    public void AddGold () {
-        this.pickupGold++;
-    }
-    
-    
 
-    public void SetSheepColor ( String nik, DyeColor c ) {
-        this.SheepColor.put(nik, c);
-    }
-   
-    
-    public void GenSheepColor ( String nik ) {
+    public void collide(final Player who, final String snakeOwner) {
+
+        if (who.getName().equals(snakeOwner)) {
+            SendAB(getChatColor(snakeOwner)+snakeOwner + " §6стлкнулся со своей змейкой!");
+        } else {
+            SendAB(getChatColor(who.getName())+who.getName()+" §a6врезался в змейку "+getChatColor(snakeOwner)+snakeOwner+"§6!");
+        }
+
+        //final Snake sn = players.remove(who.getName());
+        //if (sn != null) {
+       //     sn.stop();
+        //}
+        removePlayer(who);
         
-        if (this.SheepColor.containsKey(nik)) return;
+        if (players.size()==1) { //остался последний победитель
+            endGame(false);
+        } else {
+            MiniGamesLst.spectatorPrepare(who);
+            ApiOstrov.sendTitle(who, "", "§4Вы проиграли!");
+            who.teleport(who.getLocation().add(0, 3, 0));
+            ApiOstrov.addStat(who, Stat.SN_game);
+            ApiOstrov.addStat(who, Stat.SN_loose);
+            who.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, 60, 1));
+            who.getWorld().playSound(who.getEyeLocation(), Sound.ENTITY_DONKEY_ANGRY, 0.8f, 2.0f);
+        }
+
+    }
+
+    
+    
+    
+    public void addPlayers(Player p) { //всё проверено
+        if (!players.containsKey(p.getName())) {
+            players.put(p.getName(), null);
+            p.teleport(getArenaLobby());
+            
+            if (players.size()==1) {
+                startCountdown();
+            } else {
+                int cd = cdCounter/players.size();
+                if (cd < cdCounter) {
+                   cdCounter = cd;
+                   SendAB("§2§lВремя до старта игры уменьшено!");
+                }
+            }
+
+            Main.colorChoice.giveForce(p);
+            p.getInventory().setItem(7, ItemUtils.air);
+            MG.leaveArena.giveForce(p);//p.getInventory().setItem(8, UniversalListener.leaveArena.clone());
+            PM.getOplayer(p).tabSuffix(" §5"+arenaName, p);
+            Main.sendBsignChanel(arenaName, "§2" + players.size(), state.displayColor + state.name(), state, players.size());
+        }
+    }
+
+    // 1-команда leave 2-дисконнект 3-столкнулся с собой или другим
+    public void removePlayer(final Player p) {
+        if (players.containsKey(p.getName())) {
+            final Snake sn = players.remove(p.getName());
+            if (sn!=null) {
+                sn.stop(false);
+            }
+            if (players.isEmpty()) {
+                if (task!=null) {
+                    resetGame();
+                } else {
+                    Main.sendBsignChanel(arenaName, "§2"+players.size(), state.displayColor + state.name(), state, players.size());
+                }
+            } else {
+                Oplayer op;
+                for (Player pl : getPlayers()) {
+                    op = PM.getOplayer(pl);
+                    op.score.getSideBar().update(p.getName(), "§4§o✖ §m"+getChatColor(p.getName()) + p.getName());
+                }
+                Main.sendBsignChanel(arenaName, "§2"+players.size(), state.displayColor + state.name(), state, players.size());
+            }
+        }
+    }
+
+    public void SetSheepColor(String nik, DyeColor c) {
+        SheepColor.put(nik, c);
+    }
+
+    public void generateColor(String nik) {
+        if (SheepColor.containsKey(nik)) {
+            return;
+        }
         DyeColor color;
-        
-        for ( short i=0; i<100; i++) {
-            
+        for (short i = 0; i < 100; i++) {
             color = TCUtils.randomDyeColor();
-            
-            if( !this.SheepColor.containsValue(color)) {
-                this.SheepColor.put(nik, color);
+            if (!SheepColor.containsValue(color)) {
+                SheepColor.put(nik, color);
                 break;
-            } 
+            }
         }
-        
-    }
-    
-    
-    public DyeColor GetSheepColor ( String nik ) {
-        if (this.SheepColor.containsKey(nik)) return this.SheepColor.get(nik);
-        else return DyeColor.WHITE;
-    }
-    
-    
-
-    
-    public boolean isInThisArena(Player p) {
-        return players.contains(p.getName());
-    }
-    
-    public boolean IsInThisGame(Player p) {
-        return playerTracker.containsKey(p.getName());
-    }
-    
-    public String GetScoreStatus (Player p) {
-        if (!players.contains(p.getName())) {
-            
-            return "§f§o- Зритель -";
-            
-        } else if (state == GameState.WAITING || state == GameState.STARTING ) {
-            
-            return TCUtils.toChat(GetSheepColor(p.getName()))+p.getName();
-            
-        } else if (playerTracker.containsKey(p.getName())) {
-            
-            return "§2§o✔ "+ TCUtils.toChat(GetSheepColor(p.getName()))+p.getName();
-            
-        } else return "§4§o✖ "+ TCUtils.toChat(GetSheepColor(p.getName()))+p.getName();
-    }
-    
-    
-    
-   /* 
-    public boolean HasSpeedBoost(Player player) {
-        return players.contains(player.getName()) && playerTracker.containsKey(player.getName()) ? ( playerTracker.get(player.getName())).GetSpeedBoost() != 0 : false;
-    }
-    public boolean HasSugarBoosted(Player player) {
-        return players.contains(player.getName()) && playerTracker.containsKey(player.getName()) ? ( playerTracker.get(player.getName())).IsSugarBoost() : false;
-    }
-    public void SetSpeedBoost(Player p, int speed) {
-        if ( players.contains(p.getName()) && playerTracker.containsKey(p.getName()))  playerTracker.get(p.getName()).SetSpeedBoost(speed);
-    }
-    public void SetSugarBoosted(Player p, boolean b) {
-         if ( players.contains(p.getName()) && playerTracker.containsKey(p.getName()))  playerTracker.get(p.getName()).SetSugarBoosted(b);
-     }
-*/
-
-    
-    
-    
-
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-  
-    
-    
-    
-    
-    
-    
-
-    public String getName() {
-        return this.name;
     }
 
-    public GameState getState() {
-        return this.state;
+    public DyeColor getColor(String nik) {
+        return SheepColor.getOrDefault(nik, DyeColor.WHITE);
     }
-    public void setState(GameState gamestate) {
-         this.state = gamestate;
-        // SignsListener.updateSigns( getName(), players.size(), maxplayers, getStateAsString(), playtime );
-     }
-
-    public String getStateAsString() {
-         switch (this.state) {
-             case WAITING:
-                 return "§2Заходите §8(§f"+players.size()+"§8)";
-             case STARTING:
-                 return "§6Стартует §8(§f"+players.size()+"§8)";
-             case STARTED:
-                 return "§eЗаправка §8(§f"+players.size()+"§8)";
-             case INGAME:
-                 return "§4Игра §8(§f"+players.size()+"§8)";
-             case ENDING:
-                 return "§5Финиш";
-             default:
-                 return "";
-         }
-     }
-
-
-    public String getScoreTimer() {
-         switch (getState()) {
-             case INGAME:
-                 return "§7Время: §f§l"+getTime(playtime);
-             case WAITING:
-                 return "§aОжидаем игроков.. (§b"+(minPlayers-players.size())+"§a)";
-             case STARTING:
-                 return "§7До старта: §b§l"+cdCounter ;
-             case STARTED:
-                 return "§f§lЗаправка сеном.." ;
-             default:
-                 return getStateAsString();
-         }
-    }
-
-    public HashMap<String,DyeColor> getScorePlayer() {
-         return this.SheepColor;
-    }
-   
-   
-   
-   
     
+    public String getChatColor(String nik) {
+        return TCUtils.toChat(SheepColor.getOrDefault(nik, DyeColor.WHITE));
+    }
     
     public List<Player> getPlayers() {
-        List<Player>list=new ArrayList<>();
-        players.stream().filter((nik) -> (Bukkit.getPlayerExact(nik)!=null)).forEachOrdered((nik) -> {
-            list.add(Bukkit.getPlayerExact(nik));
-        });
+        final List<Player> list = new ArrayList<>();
+        for (String nik : players.keySet()) {
+            final Player p = Bukkit.getPlayerExact(nik);
+            if (p != null) {
+                list.add(p);
+            }
+        }
         return list;
     }
-    
-    
-    
-    
-    
-    public boolean hasStarted() {
-        return ( state == GameState.INGAME );
-    }
-    
-    public boolean IsJonable() {
-        return ( state == GameState.WAITING || state == GameState.STARTING );
-    }
-    
+
+
+
     public List<Location> getSpawns() {
         return this.spawns;
     }
@@ -718,159 +510,123 @@ public class Arena {
     public Location getBoundsLow() {
         return this.boundsLow;
     }
+
     public Location getBoundsHigh() {
         return this.boundsHigh;
     }
+
     public void setBoundsLow(Location location) {
-         this.boundsLow = location;
-     }
+        this.boundsLow = location;
+    }
+
     public void setBoundsHigh(Location location) {
         this.boundsHigh = location;
     }
 
-
-
-    
-    
     public int getMinPlayers() {
         return this.minPlayers;
     }
-    
+
     public void setMinPlayers(int i) {
-        if (i<=this.maxplayers) this.minPlayers = i;
-        else this.minPlayers=this.maxplayers;
+        if (i <= this.maxplayers) {
+            this.minPlayers = i;
+        } else {
+            this.minPlayers = this.maxplayers;
+        }
     }
 
     public int getMaxPlayers() {
         return this.maxplayers;
     }
 
-
     public void addSpawn(Location location) {
         this.spawns.add(location);
         this.maxplayers = this.spawns.size();
     }
 
-
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
     public void SendAB(final String text) {
         arenaLobby.getWorld().getPlayers().stream().forEach((p) -> {
             ApiOstrov.sendActionBarDirect(p, text);
         });
     }
-    
+
     public void SendSound(final Sound s) {
         arenaLobby.getWorld().getPlayers().stream().forEach((p) -> {
-            p.playSound(p.getLocation(), s , 5.0F, 5.0F);
+            p.playSound(p.getLocation(), s, 5.0F, 5.0F);
         });
     }
 
     public void SendTitle(final String t, final String st) {
         arenaLobby.getWorld().getPlayers().stream().forEach((p) -> {
-            ApiOstrov.sendTitle(p,  t, st, 5, 20, 5);
+            ApiOstrov.sendTitle(p, t, st, 5, 20, 5);
         });
     }
-    
-   /* public void SetLevel(final int lv) {
-        arenaLobby.getWorld().getPlayers().stream().forEach((p) -> {
-            p.setLevel(lv);
-        });
-    }*/
 
 
- 
-    
-///салютики
-    private static void firework (Player p) {
-        
-        for (int i = 0; i < 6; ++i) {                           //салютики
-            new BukkitRunnable() {
-                @Override
-                public void run() {
-            Random random = new Random();
-            Firework firework = (Firework) p.getWorld().spawn(p.getLocation().clone().add(0, 5, 0), Firework.class);
-            FireworkMeta fireworkmeta = firework.getFireworkMeta();
-            FireworkEffect fireworkeffect = FireworkEffect.builder().flicker(random.nextBoolean()).withColor(Color.fromBGR(random.nextInt(256), random.nextInt(256), random.nextInt(256))).withFade(Color.fromBGR(random.nextInt(256), random.nextInt(256), random.nextInt(256))).with(FireworkEffect.Type.STAR).trail(true).build();
-
-            fireworkmeta.addEffect(fireworkeffect);
-            firework.setFireworkMeta(fireworkmeta);   
-                }}.runTaskLater(Main.getInstance(), (long)(i * 5));}
+    private static String getTime(final long sec) {
+        final long s = TimeUnit.SECONDS.toSeconds(sec) - TimeUnit.SECONDS.toMinutes(sec) * 60L;
+        final long m = TimeUnit.SECONDS.toMinutes(sec) - TimeUnit.SECONDS.toHours(sec) * 60L;
+        return String.format("%02d", m) + ":" + String.format("%02d", s);
     }
-    
-    
-    
 
-
-    
- 
-    private static String getTime(final long n) {
-
-            final long sec = TimeUnit.SECONDS.toSeconds(n) - TimeUnit.SECONDS.toMinutes(n) * 60L;
-            final long min = TimeUnit.SECONDS.toMinutes(n) - TimeUnit.SECONDS.toHours(n) * 60L;
-
-           // return  ( n2>0 ? n+":"+n2 : "00:"+n );
-           return String.format("%02d", min) + ":" + String.format("%02d", sec);
-        }
-
-
-
-
-
-
-    private void StartMusic () {
+    private void StartMusic() {
 
         try {
             if (Bukkit.getPluginManager().isPluginEnabled("NoteBlockAPI")) {
-
-                File[] files = new File(Main.getInstance().getDataFolder().getPath() + "/songs/").listFiles();
-                List<File> songs = new ArrayList<>();
-                for (File f : files)
-                    if (f.getName().contains(".nbs")) songs.add(f);
-                File song = songs.get(new Random().nextInt(songs.size()));
+                
+                File song = AM.songs.get(random.nextInt(AM.songs.size()));
                 Song s = NBSDecoder.parse(song);
 
-               // songPlayer = new PositionSongPlayer(s);
                 songPlayer = new RadioSongPlayer(s);
                 songPlayer.setAutoDestroy(true);
 
-                //songPlayer.setTargetLocation(arenaLobby);
                 songPlayer.setPlaying(true);
 
-                arenaLobby.getWorld().getPlayers().stream().forEach((p) -> { songPlayer.addPlayer(p); });
+                arenaLobby.getWorld().getPlayers().stream().forEach( p -> {
+                    songPlayer.addPlayer(p);
+                });
 
                 songPlayer.setVolume((byte) 60);
                 songPlayer.setFadeStart((byte) 25);
             }
-        } catch (NullPointerException e){}
+        } catch (NullPointerException e) {
+        }
 
     }
 
-
-    private void StopMusic () {
+    private void StopMusic() {
         try {
             if (Bukkit.getPluginManager().isPluginEnabled("NoteBlockAPI")) {
                 songPlayer.setPlaying(false);
-                this.songPlayer.destroy(); 
+                songPlayer.destroy();
             }
-        } catch (NullPointerException e){}
+        } catch (NullPointerException e) {
+        }
     }
 
+    @Override
+    public Game game() {
+        return Game.SN;
+    }
 
+    @Override
+    public boolean hasPlayer(final Player p) {
+        return players.containsKey(p.getName());
+    }
 
+    @Override
+    public String joinCmd() {
+        return "snake join ";
+    }
 
-    
+    @Override
+    public String leaveCmd() {
+        return "snake leave";
+    }
+
+    public void spectate(final Player p) {
+        MiniGamesLst.spectatorPrepare(p);
+        p.teleport(randomFielldLoc().add(0, 3, 0));
+    }
+
 }

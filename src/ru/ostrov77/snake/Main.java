@@ -1,24 +1,28 @@
 package ru.ostrov77.snake;
 
-
-
 import org.bukkit.Bukkit;
+import org.bukkit.Material;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.event.Listener;
+import org.bukkit.event.block.Action;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
 import ru.komiss77.ApiOstrov;
 import ru.komiss77.enums.GameState;
-
-
-
+import ru.komiss77.modules.menuItem.MenuItem;
+import ru.komiss77.modules.menuItem.MenuItemBuilder;
+import ru.komiss77.modules.player.PM;
+import ru.komiss77.modules.player.profile.Section;
+import ru.komiss77.utils.ItemBuilder;
 
 
 
 public class Main extends JavaPlugin implements Listener {
 
-private static Main instance;   
-    
+    private static Main instance;       
+    public static MenuItem colorChoice;
+            
 @Override
     public void onLoad() {
         instance = this;
@@ -34,23 +38,36 @@ private static Main instance;
 
         log_ok("Super Snake startup....");
         
-        AM.Init();
-        
         if (!this.getDataFolder().exists())  this.getDataFolder().mkdir();
         else if (this.getConfig() == null)   this.saveDefaultConfig();
         else {
             Files.loadAll();
-           // SignsListener.loadFile();
             Messages.loadAll();
         }
 
-        ScoreBoard.StartScore();
         Shop.startup();
         
-        Bukkit.getServer().getPluginManager().registerEvents(new GuiListener(this), this);
-        Bukkit.getServer().getPluginManager().registerEvents(new PlayerListener(), this);
+        Bukkit.getServer().getPluginManager().registerEvents(new SnakeLst(), this);
         
-        
+        final ItemStack is1=new ItemBuilder(Material.NAME_TAG)
+            .name("§aВыбор цвета")
+            .build();
+        colorChoice = new MenuItemBuilder("colorChoice", is1)
+            .slot(0)
+            .giveOnJoin(false)
+            .giveOnRespavn(false)
+            .giveOnWorld_change(false)
+            .anycase(true)
+            .canDrop(false)
+            .canPickup(false)
+            .canMove(false)
+            .interact( e -> {
+                    if (e.getAction()==Action.RIGHT_CLICK_AIR || e.getAction() == Action.RIGHT_CLICK_BLOCK) {
+                        //
+                    }
+                }
+            )
+            .create();
         Bukkit.getLogger().info("Змейка готова!");
         
     }
@@ -58,46 +75,19 @@ private static Main instance;
 
     
     
-    
-    
-    
-    /*
-	public void registerCustomEntity(Class<? extends Entity> entityClass, int id) throws Exception {     
 
-            final ReflectField<RegistryID<EntityTypes<?>>> REGISTRY_ID_FIELD = new ReflectField<>(RegistryMaterials.class, "b");
-            final ReflectField<Object[]> ID_TO_CLASS_MAP_FIELD = new ReflectField<>(RegistryID.class, "d");
-
-            // Use reflection to get the RegistryID of entities.
-            RegistryID<EntityTypes<?>> registryID = REGISTRY_ID_FIELD.get(IRegistry.ENTITY_TYPE);
-            Object[] idToClassMap = ID_TO_CLASS_MAP_FIELD.get(registryID);
-
-            // Save the the ID -> EntityTypes mapping before the registration.
-            Object oldValue = idToClassMap[id];
-
-            // Register the EntityTypes object.
-            //registryID.a(EntityTypes.a.a(EnumCreatureType.MONSTER).a(sizeWidth, sizeHeight).b().a((String) null), id);
-            registryID.a( EntityTypes.a.a(EnumCreatureType.MONSTER).b().a((String) null), id);
-
-            // Restore the ID -> EntityTypes mapping.
-            idToClassMap[id] = oldValue;
-	}  */  
-    
-    
-    
-    
-    
     
 @Override
     public void onDisable() {
 ////////////////////////////////////////////////////////////////////////////////
 
-            AM.getAllArenas().values().stream().forEach((ar) -> {
+            AM.arenas.values().stream().forEach((ar) -> {
                 ApiOstrov.sendArenaData(
-                        ar.getName(),
+                        ar.arenaName,
                         GameState.ВЫКЛЮЧЕНА,
                         "§4█████████",
                         "§2§l§oЗмейка",
-                        "§5"+ar.getName(),
+                        "§5"+ar.arenaName,
                         "§4█████████",
                         "выключена",
                         0
@@ -148,7 +138,7 @@ public static void log_err(String s) {   Bukkit.getConsoleSender().sendMessage("
         ////////////////////////////////////////////////////////////////////////////////
             ApiOstrov.sendArenaData(
                     name,
-                        GameState.РАБОТАЕТ,
+                    state,
                     "§2§l§oЗмейка",
                     "§5"+name,
                     line2,

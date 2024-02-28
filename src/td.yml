@@ -1,18 +1,18 @@
 ## YAML Template.
 ---
 
+золото выпадает только из овец противников!
+сохранять топ на аренах
 
 
 переделать ShopManager
 овца застряла в воде и утонула
-
+золото выпадать только из 2+ змейки
 
 добавить время
 
 передел магазин, таблички, убрать moveevent
 
-
-System.out.println( " 111 "+ );
 
 
 p.getLocation().getWorld().playEffect(p.getLocation(), Effect.BLAZE_SHOOT, 0, 32);
