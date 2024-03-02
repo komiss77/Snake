@@ -1,5 +1,6 @@
 package ru.ostrov77.snake;
 
+import com.destroystokyo.paper.event.entity.EntityRemoveFromWorldEvent;
 import org.bukkit.Bukkit;
 import org.bukkit.Effect;
 import org.bukkit.Material;
@@ -16,6 +17,7 @@ import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.CreatureSpawnEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
+import org.bukkit.event.entity.EntityDismountEvent;
 import org.bukkit.event.entity.EntityPickupItemEvent;
 import org.bukkit.event.entity.ItemMergeEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
@@ -43,7 +45,30 @@ public class SnakeLst implements Listener {
         }
     }    
     
+    @EventHandler(priority = EventPriority.LOW, ignoreCancelled = true)
+    public void onDismount(final EntityDismountEvent e) {
+//Ostrov.log("onDismount getEntity="+e.getEntity()+" getDismounted="+e.getDismounted()+" isCancellable?"+e.isCancellable());
+        if (e.getEntityType() == EntityType.PLAYER && e.getDismounted().getType() == EntityType.SHEEP) {
+            final Player p = (Player) e.getEntity();
+            final Arena arena = AM.getArena(p);
+//Ostrov.log("p="+p+" arena="+arena);
+            if (arena != null) {
+                e.setCancelled(true);
+//Ostrov.log("onDismount setCancelled!!!!");
+            }
+
+        }
+    }
     
+    //@EventHandler (ignoreCancelled = true, priority = EventPriority.MONITOR)
+   // public void onRemove (final EntityRemoveFromWorldEvent e) {
+    //    Arena a = AM.getArenaByWorld(e.getEntity().getWorld().getName());
+    //    if (a!=null && a.state == GameState.ИГРА) {
+//Ostrov.log("onRemove!!!! "+e.getEntity().getType());
+     //   }
+    //}  
+    
+        
     @EventHandler (ignoreCancelled = true, priority = EventPriority.HIGH)
     public void onItemMerge (final ItemMergeEvent e) {
         Arena a = AM.getArenaByWorld(e.getEntity().getWorld().getName());
@@ -102,15 +127,16 @@ public class SnakeLst implements Listener {
 
      
     
-    @EventHandler( priority = EventPriority.MONITOR)
-    public void speedBoostManager(PlayerInteractEvent e) {
-        if ( (e.getAction() == Action.RIGHT_CLICK_AIR || e.getAction() == Action.RIGHT_CLICK_BLOCK) && e.getItem()!=null && e.getMaterial() == Material.FEATHER) {
+    @EventHandler( ignoreCancelled = true, priority = EventPriority.MONITOR)
+    public void onInteract(final PlayerInteractEvent e) {
+        if ( (e.getAction() == Action.RIGHT_CLICK_AIR || e.getAction() == Action.RIGHT_CLICK_BLOCK)
+                && e.getItem()!=null && e.getMaterial() == Material.FEATHER) {
             Player p = e.getPlayer();
             final Arena arena = AM.getArena(p);
             if (arena != null && arena.state==GameState.ИГРА) {
                 Snake snake = arena.players.get(p.getName());
                 if (snake!=null ) {
-                    snake.speedBoost = Files.speedboostTimeTicks;
+                    snake.speedBoost(Files.speedboostTimeTicks, Material.FEATHER);
                 }
                 if (e.getItem().getAmount()==1) {
                     if (e.getHand()==EquipmentSlot.HAND) p.getInventory().getItemInMainHand().setType(Material.AIR);
@@ -125,31 +151,30 @@ public class SnakeLst implements Listener {
 
     
     
-    @EventHandler
-    public void sugarPickupEventSpeed(EntityPickupItemEvent e) {
+    @EventHandler( ignoreCancelled = true, priority = EventPriority.LOW)
+    public void onPickup(final EntityPickupItemEvent e) {
         if (e.getEntityType()!=EntityType.PLAYER) return;
         Player p = (Player) e.getEntity();
         final Arena arena = AM.getArena(p);
         if (arena != null) {
             final Item i = e.getItem();
-            Snake snake = arena.players.get(p.getName());
+            final Snake snake = arena.players.get(p.getName());
             if (snake!=null ) {
                 if (arena.state==GameState.ИГРА) {
                     if (i.getItemStack().getType() == Material.SUGAR) {
                         if (i.isGlowing()) return;
-                        i.setVelocity(new Vector(0, 1.0, 0));
-                        Ostrov.sync( ()->i.remove(), 5);
                         i.setGlowing(true);
+                        i.setVelocity(new Vector(0, 1.0, 0));
+                        Ostrov.sync( ()->i.remove(), 6);
                         i.getWorld().playEffect(i.getLocation(), Effect.BOW_FIRE, 5);
-                        snake.speedBoost = Files.speedboostTimeTicks;
-                        snake.sugarBoosted = true;
+                        snake.speedBoost(Files.speedboostTimeTicks, Material.SUGAR);
                     }
                 } else if (arena.state==GameState.ФИНИШ) { //золотишко подбирается только на финише
                     if (i.getItemStack().getType() == Material.SUNFLOWER) {
                         if (i.isGlowing()) return;
-                        i.setVelocity(new Vector(0, 1.0, 0));
-                        Ostrov.sync( ()->i.remove(), 5);
                         i.setGlowing(true);
+                        i.setVelocity(new Vector(0, 1.0, 0));
+                        Ostrov.sync( ()->i.remove(), 6);
                         i.getWorld().playEffect(i.getLocation(), Effect.BOW_FIRE, 5);
                         arena.pickupGold++;
                         p.playSound(p.getEyeLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1.0F, 9.9F);
@@ -157,7 +182,7 @@ public class SnakeLst implements Listener {
                         Oplayer op;
                         for (Player pl : arena.getPlayers()) {
                             op = PM.getOplayer(pl);
-                            op.score.getSideBar().update(p.getName(), arena.getChatColor(p.getName()) + p.getName() + " §7"+p.getLevel());
+                            op.score.getSideBar().update(p.getName(), arena.getChatColor(p.getName()) + p.getName() + " §6§l"+p.getLevel());
                         }
                     }
                 }

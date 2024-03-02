@@ -1,30 +1,63 @@
 package ru.ostrov77.snake;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map.Entry;
 import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
+import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
+import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
-import org.bukkit.plugin.java.JavaPlugin;
 import ru.komiss77.ApiOstrov;
 import ru.komiss77.enums.GameState;
-import ru.komiss77.utils.TCUtils;
 import ru.ostrov77.minigames.MG;
 
-public class Commands extends JavaPlugin {
 
-    public static boolean handleCommand(CommandSender cs, Command command, String s, String[] args) {
+public class SnakeCmd implements CommandExecutor, TabCompleter {
+
+    public static List<String> subCommands = List.of("join", "leave", "start");
+    
+    
+    @Override
+    public List<String> onTabComplete(CommandSender cs, Command cmnd, String command, String[] args) {
+        final List<String> sugg = new ArrayList<>();
+        switch (args.length) {
+            case 1 -> {
+                //0- пустой (то,что уже введено)
+                for (String s : subCommands) {
+                    if (s.startsWith(args[0])) {
+                        sugg.add(s);
+                    }
+                }
+            }
+            case 2 -> {
+                //1-то,что вводится (обновляется после каждой буквы
+                for (Arena a : AM.arenas.values()) {
+                    sugg.add(a.arenaName);
+                }
+            }
+
+        }
+        return sugg;
+    }    
+    
+    
+    @Override
+    public boolean onCommand(CommandSender cs, Command command, String s, String[] args) {
         
-        if ( !(cs instanceof Player) ) return false;
+        if (!(cs instanceof Player)) {
+            cs.sendMessage("Not console commad!");
+            return false;
+        }
         
         
         Player p= (Player) cs;
         
         if (args.length == 0) {
-            cs.sendMessage("? аргументы ?");
             cs.sendMessage("join <арена>");
             cs.sendMessage("leave");
-            if ( ApiOstrov.isLocalBuilder(cs, false)) {
+            if ( ApiOstrov.isLocalBuilder(p, false)) {
                 cs.sendMessage("create <арена>");
                 cs.sendMessage("addspawn <арена>");
                 cs.sendMessage("setlobby <арена>");
@@ -64,7 +97,7 @@ public class Commands extends JavaPlugin {
                         if (arena.getPlayers().size() + 1 > arena.getSpawns().size()) {
                             p.sendMessage("§4Арена заполнена!");
                         } else {
-                            arena.addPlayers(p);
+                            arena.addPlayer(p);
                         }
                     } else {
                         arena.spectate(p);
@@ -72,16 +105,32 @@ public class Commands extends JavaPlugin {
                     
                     
                 } else {
-                    cs.sendMessage(TCUtils.translateAlternateColorCodes("&".charAt(0), Messages.joinArenaBadArguments));
+                    cs.sendMessage("§cНеверные аргументы: join <арена>");
                 }
                 return true;
                 
             } else if (args[0].equalsIgnoreCase("leave") ) {
+                
                 final Arena a = AM.getArena(p);
                 if (a!=null) {
                     a.removePlayer(p);
                 }
                 MG.lobbyJoin(p);
+                
+            } else if (args[0].equalsIgnoreCase("start")) {
+
+                if ((args.length != 2  )) {
+                    cs.sendMessage("§cInsufficiant Arguments. Proper use of the command goes like this: /ss start <arena name>");
+                } else {
+                    final Arena a = AM.getArena(args[1]);
+                    if (a == null) {
+                        cs.sendMessage("§cThat arena doesn\'t exist!");
+                        return true;
+                    }
+                   a.forceStart(p);
+                }
+                return true;
+
             }
             
             
@@ -193,33 +242,7 @@ public class Commands extends JavaPlugin {
 
 
 
-            } else if (args[0].equalsIgnoreCase("start")) {
-
-                if ((args.length != 2  )) {
-                    cs.sendMessage("§cInsufficiant Arguments. Proper use of the command goes like this: /ss start <arena name>");
-                } else {
-                    final Arena a = AM.getArena(args[1]);
-                    if (a == null) {
-                        cs.sendMessage("§cThat arena doesn\'t exist!");
-                        return true;
-                    }
-
-                    //if (AM.getArena(args[1]).getPlayers().size() < 1) {
-                   //     cs.sendMessage("§cYou can\'t start an arena with no players in it!");
-                   //     return true;
-                   // }
-                   a.forceStart(p);
-                    //AM.startArenaByName(args[1]);
-                    //cs.sendMessage("§bВремя до старта уменьшено");
-                }
-
-                return true;
-
-
-
-
-
-            } else if (args[0].equalsIgnoreCase("posh") ) {
+            }  else if (args[0].equalsIgnoreCase("posh") ) {
                     if ((args.length != 2 )) {
                         cs.sendMessage("§cInsufficiant Arguments. Proper use of the command goes like this: /ss setboundshigh <arena name>");
                     } else {
@@ -302,7 +325,7 @@ public class Commands extends JavaPlugin {
         }   else if (args[0].equalsIgnoreCase("setminplayers")) {
             if (args.length == 3) {
                 if (AM.getArena(args[1]) == null) {
-                    cs.sendMessage(TCUtils.translateAlternateColorCodes("&".charAt(0), Messages.joinInvalidArenaMessage));
+                    cs.sendMessage("§cНет арены "+args[1]);
                     return true;
                 }
 

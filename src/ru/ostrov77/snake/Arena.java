@@ -20,16 +20,15 @@ import org.bukkit.potion.PotionEffectType;
 import com.xxmicloxx.NoteBlockAPI.NBSDecoder;
 import com.xxmicloxx.NoteBlockAPI.RadioSongPlayer;
 import com.xxmicloxx.NoteBlockAPI.Song;
-import net.kyori.adventure.text.Component;
 import org.bukkit.DyeColor;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
-import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.util.Vector;
 import ru.komiss77.ApiOstrov;
 import ru.komiss77.enums.Game;
 import ru.komiss77.enums.GameState;
 import ru.komiss77.enums.Stat;
+import ru.komiss77.modules.games.GM;
 import ru.komiss77.modules.player.Oplayer;
 import ru.komiss77.modules.player.PM;
 import ru.komiss77.scoreboard.SideBar;
@@ -75,6 +74,7 @@ public class Arena implements IArena {
         this.arenaLobby = arenaLobby;
         this.boundsLow = boundsLow;
         this.boundsHigh = boundsHigh;
+        Arena.this.sendArenaData();
     }
     
     public void resetGame() {
@@ -82,8 +82,9 @@ public class Arena implements IArena {
         if (task != null)   task.cancel();
         arenaLobby.getWorld().getEntities().stream().forEach(e -> {
             if (e.getType() == EntityType.PLAYER) {
-                ((Player) e).addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, 10, 1));
-                removePlayer((Player) e);
+                //((Player) e).addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, 10, 1));
+                //removePlayer((Player) e);
+                MG.lobbyJoin((Player) e);
             } else {
                 e.remove();
             }
@@ -100,7 +101,7 @@ public class Arena implements IArena {
         pickupGold = 0;
         StopMusic();
         state = GameState.ОЖИДАНИЕ;
-        Main.sendBsignMysql(arenaName, state.displayColor+state.name(), "", state, 0);
+        sendArenaData();
     }
     
     
@@ -121,8 +122,7 @@ public class Arena implements IArena {
 
                 }  else if (cdCounter > 0) {
                     --cdCounter;
-                    Main.sendBsignChanel(arenaName, 
-                            "§6Игроки: §2" + players.size(), state.displayColor + state.name() + " §4" + cdCounter, state, players.size());
+                    sendArenaData();
                     Oplayer op;
                     for (Player p : getPlayers()) {
                         op = PM.getOplayer(p);
@@ -176,7 +176,6 @@ public class Arena implements IArena {
             }
             p.playSound(p.getEyeLocation(), Sound.ENTITY_SHEEP_AMBIENT, 2, 2);
         }
-        //soloMode = players.size()==1;
 
         task = (new BukkitRunnable() {
             @Override
@@ -210,6 +209,17 @@ public class Arena implements IArena {
         state = GameState.ИГРА;
         if (task != null)  task.cancel();
 
+        Oplayer op;
+        for (Player p : getPlayers()) {
+            op = PM.getOplayer(p);
+            SideBar sb = op.score.getSideBar().setTitle("§66ПОЕХАЛИ");
+            for (String name : players.keySet()) {
+                sb.add(name, getChatColor(name)+name+" §f0");
+            }
+            sb.build();
+            ApiOstrov.sendActionBarDirect(p, "§6ПОЕХАЛИ! §aПОЕХАЛИ! §bПОЕХАЛИ!");
+        }
+        
         task = (new BukkitRunnable() {
             @Override
             public void run() {
@@ -231,7 +241,7 @@ public class Arena implements IArena {
                 
                 final String time = "§b§l" + getTime(gameTime);
                 
-                Main.sendBsignChanel(arenaName, time, "§6Игроки: §2" + players.size(), state, players.size());
+                sendArenaData();
                 
                 Oplayer op;
                 Snake sn;
@@ -241,10 +251,9 @@ public class Arena implements IArena {
                     SideBar sb = op.score.getSideBar().setTitle(time);
                     for (String name : players.keySet()) {
                         if (sn!=null) {
-                            sb.update(name, getChatColor(name) + name + " §f"+sn.playerSheep.size());
+                            sb.update(name, getChatColor(name)+name+" §f"+sn.tail.size());
                         }
                     }
-                    ApiOstrov.sendActionBarDirect(p, "§6ПОЕХАЛИ! §aПОЕХАЛИ! §bПОЕХАЛИ!");
                 }
             }
         }).runTaskTimer(Main.getInstance(), 0L, 20L);
@@ -256,18 +265,16 @@ public class Arena implements IArena {
     private void spawnSugar() {
         int ammount = 0;
         for (Entity e : arenaLobby.getWorld().getEntities()) {
-            if (e.getType() != EntityType.PLAYER && e.getTicksLived() > 300) {
+            if (e.getType()==EntityType.PLAYER || e.getType()==EntityType.SHEEP) continue;
+            if (e.getTicksLived() > 300) {
                 e.remove();
             }
             if (e.getType() == EntityType.DROPPED_ITEM) {
                 ammount++;
             }
         }
-        for (int i = ammount; i < 10; i++) {
+        for (int i = ammount; i < 5; i++) {
             final ItemStack is = new ItemStack(Material.SUGAR, 1);// AM.bonus.clone();
-            final ItemMeta im = is.getItemMeta();
-            im.displayName(Component.text(String.valueOf(random.nextInt(999))));
-            is.setItemMeta(im);
             Item item = arenaLobby.getWorld().dropItem(randomFielldLoc(), is);
             item.setVelocity(new Vector(0, 0, 0));
             item.setPickupDelay(1);
@@ -282,7 +289,7 @@ public class Arena implements IArena {
         } else {
             x = ApiOstrov.randInt(boundsLow.getBlockX(), boundsHigh.getBlockX());
         }
-        y = ((Location) spawns.get(0)).getBlockY() + 1;
+        y = (spawns.get(0)).getBlockY() ;
         if (boundsLow.getBlockZ() > boundsHigh.getBlockZ()) {
             z = ApiOstrov.randInt(boundsHigh.getBlockZ(), boundsLow.getBlockZ());
         } else {
@@ -298,7 +305,7 @@ public class Arena implements IArena {
         state = GameState.ФИНИШ;
         if (task != null) task.cancel();
 
-        Main.sendBsignChanel(arenaName, "§1 - / -", state.displayColor+state.name(), state, players.size());
+        sendArenaData();
 
         final boolean drop = timeOut || (!timeOut && players.size()==1);
         for (Player winner : getPlayers()) {
@@ -391,8 +398,10 @@ public class Arena implements IArena {
        //     sn.stop();
         //}
         removePlayer(who);
-        
-        if (players.size()==1) { //остался последний победитель
+        if (players.isEmpty()) { //была одиночная игра
+            ending = 5;
+            endGame(false);
+        } else if (players.size()==1) { //остался последний победитель
             endGame(false);
         } else {
             MiniGamesLst.spectatorPrepare(who);
@@ -402,6 +411,8 @@ public class Arena implements IArena {
             ApiOstrov.addStat(who, Stat.SN_loose);
             who.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, 60, 1));
             who.getWorld().playSound(who.getEyeLocation(), Sound.ENTITY_DONKEY_ANGRY, 0.8f, 2.0f);
+            //players.remove(who.getName());
+            
         }
 
     }
@@ -409,7 +420,7 @@ public class Arena implements IArena {
     
     
     
-    public void addPlayers(Player p) { //всё проверено
+    public void addPlayer(Player p) { //всё проверено
         if (!players.containsKey(p.getName())) {
             players.put(p.getName(), null);
             p.teleport(getArenaLobby());
@@ -425,10 +436,11 @@ public class Arena implements IArena {
             }
 
             Main.colorChoice.giveForce(p);
-            p.getInventory().setItem(7, ItemUtils.air);
             MG.leaveArena.giveForce(p);//p.getInventory().setItem(8, UniversalListener.leaveArena.clone());
+            p.getInventory().setItem(7, ItemUtils.air);
+            p.getInventory().setItem(1, ItemUtils.air);
             PM.getOplayer(p).tabSuffix(" §5"+arenaName, p);
-            Main.sendBsignChanel(arenaName, "§2" + players.size(), state.displayColor + state.name(), state, players.size());
+            sendArenaData();
         }
     }
 
@@ -439,11 +451,11 @@ public class Arena implements IArena {
             if (sn!=null) {
                 sn.stop(false);
             }
-            if (players.isEmpty()) {
+            if (players.isEmpty() && (state==GameState.СТАРТ || state == GameState.ЭКИПИРОВКА)) {
                 if (task!=null) {
                     resetGame();
                 } else {
-                    Main.sendBsignChanel(arenaName, "§2"+players.size(), state.displayColor + state.name(), state, players.size());
+                    sendArenaData();
                 }
             } else {
                 Oplayer op;
@@ -451,7 +463,7 @@ public class Arena implements IArena {
                     op = PM.getOplayer(pl);
                     op.score.getSideBar().update(p.getName(), "§4§o✖ §m"+getChatColor(p.getName()) + p.getName());
                 }
-                Main.sendBsignChanel(arenaName, "§2"+players.size(), state.displayColor + state.name(), state, players.size());
+                sendArenaData();
             }
         }
     }
@@ -629,4 +641,9 @@ public class Arena implements IArena {
         p.teleport(randomFielldLoc().add(0, 3, 0));
     }
 
+    public void sendArenaData() {
+        GM.sendArenaData(Game.SN, arenaName, state, players.size(), "§2§l§oЗмейка", "§5"+arenaName, state.displayColor+state.name(), "§6Игроки: §2"+players.size());
+    } 
+
+   
 }

@@ -25,9 +25,9 @@ import ru.komiss77.enums.GameState;
 
 public class Snake implements Runnable {
 
-    public static double snakeDefaultSpeed = 0.35D; //SPEED_ORIG=0.23000000417232513
-    public static double snakeBoostedSpeed = 0.55D; //0.65D;
-    public static double snakeSugerBoostedSpeed = 0.45D;//0.55D;
+    public static final double DEFAULT_SPEED = 0.35D; //SPEED_ORIG=0.23000000417232513
+    public static final double SUGAR_BOOSTED_SPEED = 0.45D;//0.55D;
+    public static final double FEATHER_BOOSTED_SPEED = 0.55D; //0.65D;
 
     private int tick = 1; //или все % сработаюи на 0
     public final Arena arena;
@@ -36,19 +36,19 @@ public class Snake implements Runnable {
 
     private BukkitTask task;
 
-    public final List<Entity> playerSheep = new ArrayList<>();
+    public final List<Entity> tail;
     protected final Entity masterSheep;
 
     private final DyeColor color;
     public int kills;
-    public int speedBoost;
-    public double speed = snakeDefaultSpeed; //Files.snakeDefaultSpeed;//1.0D;  //скорость овцы по умолчанию 0,23
-    public boolean sugarBoosted = false;
+    private int speedBoost;
 
+    
     public Snake(Player p, DyeColor color, Arena arena) {
         name = p.getName();
         this.arena = arena;
         this.color = color;
+        tail = new ArrayList<>();
         masterSheep = spawnSheep(p);
 
         if (masterSheep != null && masterSheep.isValid()) {
@@ -71,75 +71,58 @@ public class Snake implements Runnable {
         final Player p = Bukkit.getPlayerExact(name);
 //System.out.println("run name="+name+" p="+p+" arena="+arena+" state="+arena.getState());        
         if (p == null || !p.isOnline()) {
-            this.stop(false);
+            stop(false);
             return;
         }
 
         if (arena == null || (arena.state != GameState.ИГРА && arena.state != GameState.ЭКИПИРОВКА)) {
-            this.stop(false);
+            stop(false);
             return;
         }
 
-        //поиск столкновений
-        if (tick > 60 && tick % 2 == 0 && collided == null && arena.state == GameState.ИГРА) {
-            Entity sheep;
-            BoundingBox box = p.getBoundingBox();//.expand(0.3, 0.3, 0.3);
-            for (Snake snake : arena.players.values()) {            //перебираем змейки арены
-                if (collided != null) {
-                    break; //обработка одного столкновения за тик!
-                }
-                for (int i = 0; i < snake.playerSheep.size(); i++) {
-                    if (i < 4 && snake.name.equals(name)) {
-                        continue; //4 своих следующих овцы не учитывать
-                    }
-                    sheep = snake.playerSheep.get(i);
-
-                    if (box.overlaps(sheep.getBoundingBox())) { //если этот игрок в одном блоке с овцой
-                        if (!snake.name.equals(name)) { //столкнулся НЕ со своими - начисляем вынос
-                            kills++;
-                        }
-                        collided = snake.name;
-                        break;
-                    }
-                }
-            }
-
-            if (collided != null) { //игрок столкнулся с овцой
-                arena.collide(p, collided);
-                collided = null; //сброс для следующего
-                return; //пропустить действия ниже!
-            }
-
-        }
-
-        //не давать спешиться
-        if (tick % 10 == 0) {
-            if (masterSheep.getPassengers().isEmpty()) {
-                masterSheep.addPassenger(p);
-                //p.sendMessage("Вы не можете спешиться!");
-            }
-        }
-
-        //управление мастер-овцой
         if (arena.state == GameState.ИГРА) {
+            
+            //поиск столкновений
+            if (tick > 60 && tick % 2 == 0 && collided == null && arena.state == GameState.ИГРА) {
+                Entity sheep;
+                BoundingBox box = p.getBoundingBox();//.expand(0.3, 0.3, 0.3);
+                for (Snake snake : arena.players.values()) {            //перебираем змейки арены
+                    if (collided != null) {
+                        break; //обработка одного столкновения за тик!
+                    }
+                    for (int i = 0; i < snake.tail.size(); i++) {
+                        if (i < 4 && snake.name.equals(name)) {
+                            continue; //4 своих следующих овцы не учитывать
+                        }
+                        sheep = snake.tail.get(i);
+
+                        if (box.overlaps(sheep.getBoundingBox())) { //если этот игрок в одном блоке с овцой
+                            if (!snake.name.equals(name)) { //столкнулся НЕ со своими - начисляем вынос
+                                kills++;
+                            }
+                            collided = snake.name;
+                            break;
+                        }
+                    }
+                }
+
+                if (collided != null) { //игрок столкнулся с овцой
+                    arena.collide(p, collided);
+                    collided = null; //сброс для следующего
+                    return; //пропустить действия ниже!
+                }
+
+            }
+
 
             if (speedBoost > 0) {
-                if (sugarBoosted) {
-                    updateSpeed(snakeSugerBoostedSpeed);
-                } else {
-                    updateSpeed(snakeSugerBoostedSpeed);
-                }
                 --speedBoost;
                 if (speedBoost == 0) {
-                    updateSpeed(snakeDefaultSpeed);
-                    sugarBoosted = false;
+                    updateSpeed(DEFAULT_SPEED);
                 }
             }
 
-            //carrot.teleport(getCarrotLoc(p));
-            //final Vector vector = masterSheep.getLocation().getDirection().multiply(speed);
-            masterSheep.setRotation(p.getLocation().getYaw(), 0); //ориентация головы как у седока, но только вправо-влево
-
+          /*  masterSheep.setRotation(p.getLocation().getYaw(), 0); //ориентация головы как у седока, но только вправо-влево
             if (tick % 10 == 0) {
                 Location loc = p.getLocation();
                 loc.setPitch(0);
@@ -149,47 +132,118 @@ public class Snake implements Runnable {
                 final Location moveTo = masterSheep.getLocation().add(direction);
                 final Mob mob = (Mob) masterSheep;
                 mob.getPathfinder().moveTo(moveTo);
+            }*/
+            
+            Vector vel = p.getLocation().getDirection().setY(0).normalize().multiply(4);
 
-            }
+            Mob before = null;
+            for (int i = 0; i < tail.size(); i++) {
+                Mob tailEnt = (Mob) tail.get(i);
+                Location loc = p.getLocation().add(vel);
+                if (i == 0) {
+                    loc = tailEnt.getLocation().add(vel);
+                }
+                if (before != null) {
+                    loc = before.getLocation();
+                }
+                if (loc.toVector().subtract(tailEnt.getLocation().toVector()).length() > 12.0D) {
+                    final Vector v = tailEnt.getLocation().toVector().subtract(loc.toVector()).setY(0).normalize();
+                    loc = tailEnt.getLocation().add(v.multiply(12));
+                }
+                if (before != null) {
+                    final Vector v = before.getLocation().toVector().subtract(tailEnt.getLocation().toVector()).setY(0).normalize();
+                    Location tp = before.getLocation().add(v.multiply(1.4D));
+                    tp.setPitch(tailEnt.getLocation().getPitch());
+                    tp.setYaw(tailEnt.getLocation().getYaw());
+                    tailEnt.teleport(tp);
+                }
+
+                tailEnt.getPathfinder().moveTo(loc);
+
+                before = tailEnt;
+            }  
 
         }
 
-        if (tick > 50 && tick % 40 == 0 && arena.state == GameState.ИГРА) { //SheepSpawn
-            final Entity lastSheep = playerSheep.get(playerSheep.size() - 1);
-            spawnSheep(lastSheep);
-        }
+        //if (tick > 50 && tick % 40 == 0 && arena.state == GameState.ИГРА) {
+       //     final Entity lastSheep = tail.get(tail.size() - 1);
+        //    spawnSheep(lastSheep);
+        //}
 
         tick++;
 
     }
+    
+   // private Vector traj2D(final Entity a, final Entity b) {
+   //     return b.getLocation().toVector().subtract(a.getLocation().toVector()).setY(0).normalize();
+   // }
 
-    private Entity spawnSheep(final Entity target) {
-        final Entity newSheep = target.getWorld().spawnEntity(target.getLocation(), EntityType.SHEEP);
-        newSheep.setInvulnerable(true);
-        ((Sheep) newSheep).setColor(color);
-        //final Mob mob = (Mob) newSheep;
-        Bukkit.getMobGoals().removeAllGoals(((Sheep) newSheep));
-        if (target.getType() != EntityType.PLAYER) {
-            final FollowGoal goal = new FollowGoal((Mob) newSheep, (LivingEntity) target, arena);
-            Bukkit.getMobGoals().addGoal((Sheep) newSheep, 1, goal);
+    //private Vector traj(final Location a, final Location b) {
+    //    return b.toVector().subtract(a.toVector()).setY(0).normalize();
+   // }
+
+    //private Vector traj(final Entity a, final Entity b) {
+    //    return b.getLocation().toVector().subtract(a.getLocation().toVector()).setY(0).normalize();
+    //}
+
+    
+    private Entity spawnSheep(final Entity followTo) {
+        Location loc = followTo.getLocation();
+        
+        if (tail.size()>1) {
+            final Vector v = tail.get(tail.size() - 2).getLocation().toVector().subtract(followTo.getLocation().toVector()).setY(0).normalize();
+            loc.add(v);
+        } else {
+            loc.subtract(followTo.getLocation().getDirection().setY(0));
         }
-        playerSheep.add(newSheep);
-        ((LivingEntity) newSheep).getAttribute(Attribute.GENERIC_MOVEMENT_SPEED).setBaseValue(speed);
+        
+        final Sheep newSheep = (Sheep) followTo.getWorld().spawnEntity(loc, EntityType.SHEEP);
+        newSheep.setInvulnerable(true);
+        newSheep.setColor(color);
+        newSheep.setNoDamageTicks(Integer.MAX_VALUE);
+        
+        Bukkit.getMobGoals().removeAllGoals(newSheep);
+        ((LivingEntity) newSheep).getAttribute(Attribute.GENERIC_MOVEMENT_SPEED).setBaseValue(DEFAULT_SPEED);
+        
+        //if (target.getType() != EntityType.PLAYER) { //для всех, кроме первой
+            //final FollowGoal goal = new FollowGoal((Mob) newSheep, (LivingEntity) target, arena);
+            //Bukkit.getMobGoals().addGoal(newSheep, 1, goal);
+       // }
+        tail.add(newSheep);
         return newSheep;
     }
+    
 
-    private void updateSpeed(final double newSpeed) {
-        for (Entity sheep : playerSheep) {
-            ((LivingEntity) sheep).getAttribute(Attribute.GENERIC_MOVEMENT_SPEED).setBaseValue(newSpeed);
+        /* UC
+        public void addSheepToTail(int amount) {
+        Player player = getPlayer();
+        for (int i = 0; i < amount; i++) {
+            Location loc = player.getLocation();
+            if (!tail.isEmpty()) {
+                loc = lastTail().getLocation();
+            }
+            if (tail.size() > 1) {
+                loc.add(traj(tail.get(tail.size() - 2), lastTail()));
+            } else {
+                loc.subtract(player.getLocation().getDirection().setY(0));
+            }
+            Sheep tailEnt = (loc.getWorld().spawn(loc, Sheep.class));
+            tailEnt.setNoDamageTicks(Integer.MAX_VALUE);
+            tailEnt.setRemoveWhenFarAway(false);
+            tailEnt.teleport(loc);
+            tail.add(tailEnt);
+            tailEnt.setColor(DyeColor.values()[color]);
         }
     }
+    */
+
 
     public void stop(final boolean drop) {
         if (task != null) {
             task.cancel();
             task = null;
 
-            for (Entity sheep : playerSheep) {
+            for (Entity sheep : tail) {
                 if (sheep == null || sheep.isDead()) {
                     continue;
                 }
@@ -212,11 +266,36 @@ public class Snake implements Runnable {
                 sheep.remove();
             }
 
-            playerSheep.clear();
+            tail.clear();
             kills = 0;
 
         }
 
     }
+
+
+    public void allpePickup() {
+        final Entity lastSheep = tail.get(tail.size() - 1);
+        spawnSheep(lastSheep);
+    }
+    
+    
+    public void speedBoost(final int speedboostTicks, final Material booster) {
+        if (booster == Material.SUGAR) {
+            updateSpeed(SUGAR_BOOSTED_SPEED);
+            speedBoost = speedboostTicks;
+        } else  if (booster == Material.FEATHER) {
+            updateSpeed(FEATHER_BOOSTED_SPEED);
+            speedBoost = speedboostTicks;
+        }    
+    }
+    
+    private void updateSpeed(final double newSpeed) {
+        for (Entity sheep : tail) {
+            ((LivingEntity) sheep).getAttribute(Attribute.GENERIC_MOVEMENT_SPEED).setBaseValue(newSpeed);
+        }
+    }
+
+
 
 }

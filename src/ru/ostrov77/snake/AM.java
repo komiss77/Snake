@@ -7,7 +7,6 @@ import java.util.Map.Entry;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.bukkit.util.Vector;
-import ru.komiss77.enums.GameState;
 import ru.komiss77.objects.CaseInsensitiveMap;
 import ru.ostrov77.minigames.MG;
 
@@ -47,12 +46,12 @@ public class AM {
         return can;
     }
 
-    public static void LoadArena(List spawns, String name, Location arenaLobby, Location boundsLow, Location boundsHigh, int minPlayers) {
+    public static void LoadArena(List spawns, String arenaName, Location arenaLobby, Location boundsLow, Location boundsHigh, int minPlayers) {
 //System.out.println("Load: "+name+" spawns:"+spawns +" arenaLobby:"+arenaLobby+" boundsLow:"+boundsLow+" boundsHigh:"+boundsHigh+" minPlayers:"+minPlayers);  
-        Arena arena = new Arena(spawns, name, arenaLobby, boundsLow, boundsHigh, minPlayers);
-        arenas.put(name, arena);
-        MG.arenas.put(name, arena);
-        Main.sendBsignMysql(name, arena.state.displayColor+arena.state.name(), "", GameState.ОЖИДАНИЕ, 0);
+        Arena arena = new Arena(spawns, arenaName, arenaLobby, boundsLow, boundsHigh, minPlayers);
+        arenas.put(arenaName, arena);
+        MG.arenas.put(arenaName, arena);
+        //GM.sendArenaData(Game.SN, arenaName, arena.state, 0, arena.state.displayColor+arena.state.name(), "", arena.state.displayColor+arena.state.name(), "");
     }
 
 
@@ -82,11 +81,6 @@ public class AM {
         }
     }
 
-    public static void stopAllArena() {
-        arenas.entrySet().stream().forEach((e) -> {
-            e.getValue().resetGame();
-        });
-    }
 
     public static Arena getArena(Player p) {
         for (Entry<String, Arena> e : arenas.entrySet()) {
