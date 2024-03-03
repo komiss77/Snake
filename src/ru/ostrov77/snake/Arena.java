@@ -20,11 +20,14 @@ import org.bukkit.potion.PotionEffectType;
 import com.xxmicloxx.NoteBlockAPI.NBSDecoder;
 import com.xxmicloxx.NoteBlockAPI.RadioSongPlayer;
 import com.xxmicloxx.NoteBlockAPI.Song;
+import java.util.EnumSet;
 import org.bukkit.DyeColor;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
+import org.bukkit.entity.Sheep;
 import org.bukkit.util.Vector;
 import ru.komiss77.ApiOstrov;
+import ru.komiss77.Ostrov;
 import ru.komiss77.enums.Game;
 import ru.komiss77.enums.GameState;
 import ru.komiss77.enums.Stat;
@@ -49,9 +52,9 @@ public class Arena implements IArena {
     private RadioSongPlayer songPlayer;
     private Random random = new Random();
     
-    private BukkitTask task;
+    private BukkitTask task, sheepTask;
 
-    private HashMap<String, DyeColor> SheepColor = new HashMap();
+    public List <Sheep> add = new ArrayList<>();//WeakHashMap<Entity, Integer> add = new WeakHashMap();
     public HashMap<String, Snake> players = new HashMap();
 
     private int minPlayers, maxplayers;
@@ -60,7 +63,6 @@ public class Arena implements IArena {
     private int gameTime = 150;
     public int pickupGold = 0;
     private int ending = 20;//салюты,награждения
-    //private boolean soloMode;
 
     
     public Arena(final List spawns, final String name, final Location arenaLobby, final Location boundsLow, final Location boundsHigh, final int minPlayers) {
@@ -80,20 +82,19 @@ public class Arena implements IArena {
     public void resetGame() {
         if (state==GameState.ОЖИДАНИЕ) return;
         if (task != null)   task.cancel();
-        arenaLobby.getWorld().getEntities().stream().forEach(e -> {
+        if (sheepTask != null)   sheepTask.cancel();
+        arenaLobby.getWorld().getEntities().stream().forEach( e -> {
             if (e.getType() == EntityType.PLAYER) {
-                //((Player) e).addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, 10, 1));
-                //removePlayer((Player) e);
                 MG.lobbyJoin((Player) e);
             } else {
                 e.remove();
             }
         });
         players.values().stream().forEach( sn -> {
-            if (sn!=null) sn.stop(false);
+            sn.stop(false);
         });
         players.clear();
-        SheepColor.clear();
+        add.clear();
         cdCounter = 30;
         prestart = 7;
         gameTime = 150;
@@ -156,15 +157,33 @@ public class Arena implements IArena {
         StartMusic();
 
         int i = 0;
+        final EnumSet colors = EnumSet.noneOf(DyeColor.class);
+        for (Snake sn : players.values()) {
+            if (sn.color !=DyeColor.WHITE) {
+                colors.add(sn.color);
+            }
+        }
+        
+        DyeColor color;
+        Snake sn;
+        
         for (Player p : getPlayers()) {
             p.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, 5, 1));
             p.teleport(spawns.get(i));
             i++;
 
             p.getInventory().clear();
-            generateColor(p.getName()); //генерируем цвет
+            sn = players.get(p.getName());
+            for (int x = 0; x < 100; x++) {
+                color = TCUtils.randomDyeColor();
+                if (!colors.contains(color)) {
+                    colors.add(color);
+                    sn.color = color;
+                    break;
+                }
+            }
 
-            players.put(p.getName(), new Snake(p, getColor(p.getName()), this));
+            sn.start(p);
 
             if (Shop.selected.containsKey(p.getUniqueId())) {
                 if (((String) Shop.selected.get(p.getUniqueId())).contains("fastsnake")) {
@@ -183,12 +202,10 @@ public class Arena implements IArena {
                 if (players.isEmpty()) {
                     resetGame();
                 }
-                
                 if (prestart == 0) {
                     prestart = 7;
                     this.cancel();
                     GameProgress();
-
                 } else {
                     Oplayer op;
                     for (Player p : getPlayers()) {
@@ -201,6 +218,63 @@ public class Arena implements IArena {
                 
             }
         }).runTaskTimer(Main.getInstance(), 0L, 20L);
+        
+        sheepTask = (new BukkitRunnable() {
+            int t;
+            @Override
+            public void run() {
+                if (t%7==0) {
+                    Sheep sheep;
+                    if (!add.isEmpty()) {
+                        for (int i = add.size()-1; i>=0; i--) {
+                            sheep = add.get(i);
+                            if (sheep.getTicksLived()>300) {
+                                sheep.remove();
+                                add.remove(i);
+                            }
+                        }
+                    }
+                    while (add.size()<10) {
+                        final Location loc = randomFielldLoc();
+                        final Sheep s = (Sheep) loc.getWorld().spawnEntity(loc, EntityType.SHEEP);
+                        s.setInvulnerable(true);
+                        s.setNoDamageTicks(Integer.MAX_VALUE);
+                        Bukkit.getMobGoals().removeAllGoals(s);
+                        s.setAI(false);
+                        s.setGlowing(false);
+                        s.setGravity(false);
+                        s.setBaby();
+                        s.setAgeLock(true);
+                        s.setTicksLived(1+random.nextInt(200)); //Age value (0) must be greater than 0
+                        s.setRotation( random.nextInt(360) - 180, random.nextInt(180) - 90);
+                        add.add(s);
+                    }
+                }
+                
+                add.stream().forEach( s -> {
+                    if (t%5==0) s.setColor(DyeColor.values()[random.nextInt(16)]);
+                    float yaw = s.getBodyYaw();
+                    if (s.getPitch()>0) {
+                        yaw++;
+                        if (yaw>=180) {
+                            s.setRotation(yaw, random.nextInt(89) - 90 ); //-90 : -1
+                        } else {
+                            s.setBodyYaw(yaw);
+                        }
+                    } else {
+                        yaw--;
+                        if (yaw<=-180) {
+                            s.setRotation(yaw, 1 + random.nextInt(89)); //1 : 90
+                        } else {
+                            s.setBodyYaw(yaw);
+                        }
+                    }
+Ostrov.log(s.getEntityId()+":"+s.getBodyYaw());
+                });
+                t++;
+            }
+        }).runTaskTimer(Main.getInstance(), 0L, 1);
+
     }
 
     
@@ -236,7 +310,7 @@ public class Arena implements IArena {
 
                 gameTime--;
                 if (gameTime%5==0) {
-                    spawnSugar();
+                    spawnItems();
                 }
                 
                 final String time = "§b§l" + getTime(gameTime);
@@ -257,31 +331,41 @@ public class Arena implements IArena {
                 }
             }
         }).runTaskTimer(Main.getInstance(), 0L, 20L);
+  
 
+        
     }
 
 
-
-    private void spawnSugar() {
-        int ammount = 0;
+    private void spawnItems() {
+        int sugar = 0;
+        Item i;
         for (Entity e : arenaLobby.getWorld().getEntities()) {
-            if (e.getType()==EntityType.PLAYER || e.getType()==EntityType.SHEEP) continue;
+            if (e.getType()!=EntityType.DROPPED_ITEM) continue;
             if (e.getTicksLived() > 300) {
                 e.remove();
             }
-            if (e.getType() == EntityType.DROPPED_ITEM) {
-                ammount++;
+            i = (Item) e;
+            if (i.getItemStack().getType() == Material.SUGAR) {
+                sugar++;
             }
         }
-        for (int i = ammount; i < 5; i++) {
-            final ItemStack is = new ItemStack(Material.SUGAR, 1);// AM.bonus.clone();
-            Item item = arenaLobby.getWorld().dropItem(randomFielldLoc(), is);
+        addItems(Material.SUGAR, 5 - sugar);
+    }
+
+    private void addItems(final Material mat, final int ammount) {
+        if (ammount<=0) return;
+       for (int i = 0; i < ammount; i++) {
+            final ItemStack is = new ItemStack(mat, 1);// AM.bonus.clone();
+            final Item item = arenaLobby.getWorld().dropItem(randomFielldLoc(), is);
             item.setVelocity(new Vector(0, 0, 0));
             item.setPickupDelay(1);
             item.setGravity(false);
+            //item.setGlowing(true);
         }
     }
-
+    
+    
     private Location randomFielldLoc() {
         int x, y, z;
         if (boundsLow.getBlockX() > boundsHigh.getBlockX()) {
@@ -304,6 +388,7 @@ public class Arena implements IArena {
         if (state != GameState.ИГРА)  return;
         state = GameState.ФИНИШ;
         if (task != null) task.cancel();
+        if (sheepTask != null) sheepTask.cancel();
 
         sendArenaData();
 
@@ -341,11 +426,11 @@ public class Arena implements IArena {
                             DonatEffect.spawnRandomFirework(winner.getEyeLocation());
                         }
                         if (ending == 5) {
-                            winner.sendMessage("§fМонет собрано: §b" + winner.getLevel() + " §f!");
+                            final Snake sn = players.get(winner.getName());
+                            winner.sendMessage("§fМонет собрано: §b"+sn.coin+" §f!");
                             ApiOstrov.addStat(winner, Stat.SN_game);
                             ApiOstrov.addStat(winner, Stat.SN_win);
-                            ApiOstrov.addStat(winner, Stat.SN_gold, winner.getLevel());
-                            winner.setLevel(0);
+                            ApiOstrov.addStat(winner, Stat.SN_gold, sn.coin);
                         }
                     }
                 }
@@ -422,7 +507,7 @@ public class Arena implements IArena {
     
     public void addPlayer(Player p) { //всё проверено
         if (!players.containsKey(p.getName())) {
-            players.put(p.getName(), null);
+            players.put(p.getName(), new Snake(p, this));
             p.teleport(getArenaLobby());
             
             if (players.size()==1) {
@@ -436,6 +521,9 @@ public class Arena implements IArena {
             }
 
             Main.colorChoice.giveForce(p);
+            if (p.hasPermission("forcestart")) {
+                MG.forceStart.giveForce(p);
+            }
             MG.leaveArena.giveForce(p);//p.getInventory().setItem(8, UniversalListener.leaveArena.clone());
             p.getInventory().setItem(7, ItemUtils.air);
             p.getInventory().setItem(1, ItemUtils.air);
@@ -467,31 +555,8 @@ public class Arena implements IArena {
             }
         }
     }
-
-    public void SetSheepColor(String nik, DyeColor c) {
-        SheepColor.put(nik, c);
-    }
-
-    public void generateColor(String nik) {
-        if (SheepColor.containsKey(nik)) {
-            return;
-        }
-        DyeColor color;
-        for (short i = 0; i < 100; i++) {
-            color = TCUtils.randomDyeColor();
-            if (!SheepColor.containsValue(color)) {
-                SheepColor.put(nik, color);
-                break;
-            }
-        }
-    }
-
-    public DyeColor getColor(String nik) {
-        return SheepColor.getOrDefault(nik, DyeColor.WHITE);
-    }
-    
     public String getChatColor(String nik) {
-        return TCUtils.toChat(SheepColor.getOrDefault(nik, DyeColor.WHITE));
+        return TCUtils.toChat(players.get(nik).color);
     }
     
     public List<Player> getPlayers() {
@@ -628,7 +693,7 @@ public class Arena implements IArena {
 
     @Override
     public String joinCmd() {
-        return "snake join ";
+        return "snake join "+arenaName;
     }
 
     @Override
@@ -644,6 +709,11 @@ public class Arena implements IArena {
     public void sendArenaData() {
         GM.sendArenaData(Game.SN, arenaName, state, players.size(), "§2§l§oЗмейка", "§5"+arenaName, state.displayColor+state.name(), "§6Игроки: §2"+players.size());
     } 
+
+    @Override
+    public String forceStartCmd() {
+        return "snake start "+arenaName;
+    }
 
    
 }

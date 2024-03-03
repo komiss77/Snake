@@ -1,6 +1,5 @@
 package ru.ostrov77.snake;
 
-import com.destroystokyo.paper.event.entity.EntityRemoveFromWorldEvent;
 import org.bukkit.Bukkit;
 import org.bukkit.Effect;
 import org.bukkit.Material;
@@ -162,27 +161,24 @@ public class SnakeLst implements Listener {
             if (snake!=null ) {
                 if (arena.state==GameState.ИГРА) {
                     if (i.getItemStack().getType() == Material.SUGAR) {
-                        if (i.isGlowing()) return;
-                        i.setGlowing(true);
-                        i.setVelocity(new Vector(0, 1.0, 0));
-                        Ostrov.sync( ()->i.remove(), 6);
-                        i.getWorld().playEffect(i.getLocation(), Effect.BOW_FIRE, 5);
+                        //if (i.isGlowing()) return;
+                        pickupEffect(i);
                         snake.speedBoost(Files.speedboostTimeTicks, Material.SUGAR);
-                    }
+                    }// else if (i.getItemStack().getType() == Material.ENCHANTED_GOLDEN_APPLE) {
+                    //    pickupEffect(i);
+                    //    snake.addSheep(p);
+                    //}
                 } else if (arena.state==GameState.ФИНИШ) { //золотишко подбирается только на финише
                     if (i.getItemStack().getType() == Material.SUNFLOWER) {
-                        if (i.isGlowing()) return;
-                        i.setGlowing(true);
-                        i.setVelocity(new Vector(0, 1.0, 0));
-                        Ostrov.sync( ()->i.remove(), 6);
-                        i.getWorld().playEffect(i.getLocation(), Effect.BOW_FIRE, 5);
+                        //if (i.isGlowing()) return;
+                        pickupEffect(i);
                         arena.pickupGold++;
+                        snake.coin++;
                         p.playSound(p.getEyeLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1.0F, 9.9F);
-                        p.setLevel(p.getLevel()+1);
                         Oplayer op;
                         for (Player pl : arena.getPlayers()) {
                             op = PM.getOplayer(pl);
-                            op.score.getSideBar().update(p.getName(), arena.getChatColor(p.getName()) + p.getName() + " §6§l"+p.getLevel());
+                            op.score.getSideBar().update(p.getName(), arena.getChatColor(p.getName())+p.getName()+" §6§l"+snake.coin);
                         }
                     }
                 }
@@ -191,6 +187,13 @@ public class SnakeLst implements Listener {
         }
     }
 
+    private static void pickupEffect(final Item i) {
+        //i.setGlowing(true);
+        i.setPickupDelay(Integer.MAX_VALUE);
+        i.setVelocity(new Vector(0, 1.0, 0));
+        Ostrov.sync( ()->i.remove(), 6);
+        i.getWorld().playEffect(i.getLocation(), Effect.BOW_FIRE, 5);  
+    }
 
 
     @EventHandler(ignoreCancelled = true, priority = EventPriority.LOWEST)
@@ -250,6 +253,7 @@ public class SnakeLst implements Listener {
 
     }
 */
+
 
     
 }

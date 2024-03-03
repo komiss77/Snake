@@ -1,5 +1,5 @@
 package ru.ostrov77.snake;
-/*
+
 import com.destroystokyo.paper.entity.Pathfinder.PathResult;
 import com.destroystokyo.paper.entity.ai.Goal;
 import com.destroystokyo.paper.entity.ai.GoalKey;
@@ -87,4 +87,3 @@ public class FollowGoal implements Goal<Sheep> {
     }
 
 }
-*/
