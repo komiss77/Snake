@@ -22,6 +22,7 @@ import com.xxmicloxx.NoteBlockAPI.RadioSongPlayer;
 import com.xxmicloxx.NoteBlockAPI.Song;
 import java.util.EnumSet;
 import org.bukkit.DyeColor;
+import org.bukkit.Effect;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Sheep;
@@ -37,7 +38,9 @@ import ru.komiss77.modules.player.PM;
 import ru.komiss77.scoreboard.SideBar;
 import ru.komiss77.utils.DonatEffect;
 import ru.komiss77.utils.ItemUtils;
+import ru.komiss77.utils.LocationUtil;
 import ru.komiss77.utils.TCUtils;
+import ru.komiss77.version.Nms;
 import ru.ostrov77.minigames.IArena;
 import ru.ostrov77.minigames.MG;
 import ru.ostrov77.minigames.MiniGamesLst;
@@ -46,18 +49,17 @@ public class Arena implements IArena {
 
     public String arenaName;
     public Location boundsLow, boundsHigh, arenaLobby;
-    public GameState state = GameState.ОЖИДАНИЕ;
-    private List<Location> spawns = new ArrayList();
+    public GameState state = GameState.ВЫКЛЮЧЕНА;
+    public List<Location> spawns = new ArrayList();
     
     private RadioSongPlayer songPlayer;
     private Random random = new Random();
     
     private BukkitTask task, sheepTask;
 
-    public List <Sheep> add = new ArrayList<>();//WeakHashMap<Entity, Integer> add = new WeakHashMap();
+    public List <Sheep> grow = new ArrayList<>();
     public HashMap<String, Snake> players = new HashMap();
 
-    private int minPlayers, maxplayers;
     private int cdCounter = 30;//ожид в лобби арены
     private int prestart = 7;//ожид сидя на овцах
     private int gameTime = 150;
@@ -65,18 +67,12 @@ public class Arena implements IArena {
     private int ending = 20;//салюты,награждения
 
     
-    public Arena(final List spawns, final String name, final Location arenaLobby, final Location boundsLow, final Location boundsHigh, final int minPlayers) {
-        if (AM.ArenaExist(name)) {
-            return; //не создаём дубль!!
-        }
+    public Arena(final List<Location> spawns, final String name, final Location arenaLobby, final Location boundsLow, final Location boundsHigh) {
         this.arenaName = name;
         this.spawns = spawns;
-        this.maxplayers = spawns.size();
-        this.minPlayers = minPlayers;
         this.arenaLobby = arenaLobby;
         this.boundsLow = boundsLow;
         this.boundsHigh = boundsHigh;
-        Arena.this.sendArenaData();
     }
     
     public void resetGame() {
@@ -94,7 +90,7 @@ public class Arena implements IArena {
             sn.stop(false);
         });
         players.clear();
-        add.clear();
+        grow.clear();
         cdCounter = 30;
         prestart = 7;
         gameTime = 150;
@@ -159,7 +155,7 @@ public class Arena implements IArena {
         int i = 0;
         final EnumSet colors = EnumSet.noneOf(DyeColor.class);
         for (Snake sn : players.values()) {
-            if (sn.color !=DyeColor.WHITE) {
+            if (sn.color !=null) {
                 colors.add(sn.color);
             }
         }
@@ -174,25 +170,27 @@ public class Arena implements IArena {
 
             p.getInventory().clear();
             sn = players.get(p.getName());
-            for (int x = 0; x < 100; x++) {
-                color = TCUtils.randomDyeColor();
-                if (!colors.contains(color)) {
-                    colors.add(color);
-                    sn.color = color;
-                    break;
+            if (sn.color==null) {
+                for (int x = 0; x < 100; x++) {
+                    color = TCUtils.randomDyeColor();
+                    if (!colors.contains(color)) {
+                        colors.add(color);
+                        sn.color = color;
+                        break;
+                    }
                 }
             }
 
             sn.start(p);
 
-            if (Shop.selected.containsKey(p.getUniqueId())) {
+          /*  if (Shop.selected.containsKey(p.getUniqueId())) {
                 if (((String) Shop.selected.get(p.getUniqueId())).contains("fastsnake")) {
-                    p.getInventory().setItem(0, new ItemStack(Material.FEATHER, Files.fastKitBoosts));
+                    p.getInventory().setItem(0, new ItemStack(Material.FEATHER, 10));
                 }
                 if (((String) Shop.selected.get(p.getUniqueId())).contains("ferrarisnake")) {
-                    p.getInventory().setItem(0, new ItemStack(Material.FEATHER, Files.ferrariKitBoosts));
+                    p.getInventory().setItem(0, new ItemStack(Material.FEATHER, 20));
                 }
-            }
+            }*/
             p.playSound(p.getEyeLocation(), Sound.ENTITY_SHEEP_AMBIENT, 2, 2);
         }
 
@@ -225,16 +223,17 @@ public class Arena implements IArena {
             public void run() {
                 if (t%7==0) {
                     Sheep sheep;
-                    if (!add.isEmpty()) {
-                        for (int i = add.size()-1; i>=0; i--) {
-                            sheep = add.get(i);
+                    if (!grow.isEmpty()) {
+                        for (int i = grow.size()-1; i>=0; i--) {
+                            sheep = grow.get(i);
                             if (sheep.getTicksLived()>300) {
+                                sheep.getWorld().playEffect(sheep.getLocation(), Effect.SMOKE, 1);
                                 sheep.remove();
-                                add.remove(i);
+                                grow.remove(i);
                             }
                         }
                     }
-                    while (add.size()<10) {
+                    while (grow.size()<10) {
                         final Location loc = randomFielldLoc();
                         final Sheep s = (Sheep) loc.getWorld().spawnEntity(loc, EntityType.SHEEP);
                         s.setInvulnerable(true);
@@ -247,29 +246,25 @@ public class Arena implements IArena {
                         s.setAgeLock(true);
                         s.setTicksLived(1+random.nextInt(200)); //Age value (0) must be greater than 0
                         s.setRotation( random.nextInt(360) - 180, random.nextInt(180) - 90);
-                        add.add(s);
+                        grow.add(s);
                     }
                 }
                 
-                add.stream().forEach( s -> {
+                grow.stream().forEach( s -> {
                     if (t%5==0) s.setColor(DyeColor.values()[random.nextInt(16)]);
-                    float yaw = s.getBodyYaw();
+                    float yaw = s.getYaw();
                     if (s.getPitch()>0) {
-                        yaw++;
-                        if (yaw>=180) {
-                            s.setRotation(yaw, random.nextInt(89) - 90 ); //-90 : -1
-                        } else {
-                            s.setBodyYaw(yaw);
-                        }
+                      yaw+=s.getTicksLived()/10;
+                      if (yaw>=360) {
+                        yaw = 0;
+                      }
                     } else {
-                        yaw--;
-                        if (yaw<=-180) {
-                            s.setRotation(yaw, 1 + random.nextInt(89)); //1 : 90
-                        } else {
-                            s.setBodyYaw(yaw);
-                        }
+                      yaw-=s.getTicksLived()/10;
+                      if (yaw<=-360) {
+                        yaw = 0;
+                      }
                     }
-Ostrov.log(s.getEntityId()+":"+s.getBodyYaw());
+                    s.setRotation(yaw, s.getPitch() );
                 });
                 t++;
             }
@@ -288,7 +283,7 @@ Ostrov.log(s.getEntityId()+":"+s.getBodyYaw());
             op = PM.getOplayer(p);
             SideBar sb = op.score.getSideBar().setTitle("§66ПОЕХАЛИ");
             for (String name : players.keySet()) {
-                sb.add(name, getChatColor(name)+name+" §f0");
+                sb.add(name, players.get(name).getChatColor()+name+" §f0");
             }
             sb.build();
             ApiOstrov.sendActionBarDirect(p, "§6ПОЕХАЛИ! §aПОЕХАЛИ! §bПОЕХАЛИ!");
@@ -325,7 +320,7 @@ Ostrov.log(s.getEntityId()+":"+s.getBodyYaw());
                     SideBar sb = op.score.getSideBar().setTitle(time);
                     for (String name : players.keySet()) {
                         if (sn!=null) {
-                            sb.update(name, getChatColor(name)+name+" §f"+sn.tail.size());
+                            sb.update(name, sn.getChatColor()+name+" §f"+sn.tail.size());
                         }
                     }
                 }
@@ -367,19 +362,34 @@ Ostrov.log(s.getEntityId()+":"+s.getBodyYaw());
     
     
     private Location randomFielldLoc() {
-        int x, y, z;
-        if (boundsLow.getBlockX() > boundsHigh.getBlockX()) {
-            x = ApiOstrov.randInt(boundsHigh.getBlockX(), boundsLow.getBlockX());
-        } else {
-            x = ApiOstrov.randInt(boundsLow.getBlockX(), boundsHigh.getBlockX());
+        int y = (spawns.get(0)).getBlockY() ;
+        int x, z;
+        Location loc = null;
+        for (int i = 0; i<10; i++) {
+            if (boundsLow.getBlockX() > boundsHigh.getBlockX()) {
+                x = ApiOstrov.randInt(boundsHigh.getBlockX(), boundsLow.getBlockX());
+            } else {
+                x = ApiOstrov.randInt(boundsLow.getBlockX(), boundsHigh.getBlockX());
+            }
+            if (boundsLow.getBlockZ() > boundsHigh.getBlockZ()) {
+                z = ApiOstrov.randInt(boundsHigh.getBlockZ(), boundsLow.getBlockZ());
+            } else {
+                z = ApiOstrov.randInt(boundsLow.getBlockZ(), boundsHigh.getBlockZ());
+            }
+                   
+            if (LocationUtil.isFeetAllow(Nms.getFastMat(arenaLobby.getWorld(), x, y, z))
+                    && Nms.getFastMat(arenaLobby.getWorld(), x, y+1, z) == Material.AIR
+                    && Nms.getFastMat(arenaLobby.getWorld(), x, y+2, z) == Material.AIR
+                    && Nms.getFastMat(arenaLobby.getWorld(), x, y+3, z) == Material.AIR
+                    ) {
+                loc = new Location(arenaLobby.getWorld(), (double) x, (double) y, (double) z);
+            }
         }
-        y = (spawns.get(0)).getBlockY() ;
-        if (boundsLow.getBlockZ() > boundsHigh.getBlockZ()) {
-            z = ApiOstrov.randInt(boundsHigh.getBlockZ(), boundsLow.getBlockZ());
+        if (loc==null) {
+            return spawns.get(random.nextInt(spawns.size()-1));
         } else {
-            z = ApiOstrov.randInt(boundsLow.getBlockZ(), boundsHigh.getBlockZ());
+            return loc;
         }
-        return new Location(arenaLobby.getWorld(), (double) x, (double) y, (double) z);
     }
 
     
@@ -470,18 +480,8 @@ Ostrov.log(s.getEntityId()+":"+s.getBodyYaw());
 
 
 
-    public void collide(final Player who, final String snakeOwner) {
+    public void collide(final Player who) {
 
-        if (who.getName().equals(snakeOwner)) {
-            SendAB(getChatColor(snakeOwner)+snakeOwner + " §6стлкнулся со своей змейкой!");
-        } else {
-            SendAB(getChatColor(who.getName())+who.getName()+" §a6врезался в змейку "+getChatColor(snakeOwner)+snakeOwner+"§6!");
-        }
-
-        //final Snake sn = players.remove(who.getName());
-        //if (sn != null) {
-       //     sn.stop();
-        //}
         removePlayer(who);
         if (players.isEmpty()) { //была одиночная игра
             ending = 5;
@@ -491,7 +491,7 @@ Ostrov.log(s.getEntityId()+":"+s.getBodyYaw());
         } else {
             MiniGamesLst.spectatorPrepare(who);
             ApiOstrov.sendTitle(who, "", "§4Вы проиграли!");
-            who.teleport(who.getLocation().add(0, 3, 0));
+            who.teleport(who.getEyeLocation().add(0, 2, 0));
             ApiOstrov.addStat(who, Stat.SN_game);
             ApiOstrov.addStat(who, Stat.SN_loose);
             who.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, 60, 1));
@@ -508,7 +508,7 @@ Ostrov.log(s.getEntityId()+":"+s.getBodyYaw());
     public void addPlayer(Player p) { //всё проверено
         if (!players.containsKey(p.getName())) {
             players.put(p.getName(), new Snake(p, this));
-            p.teleport(getArenaLobby());
+            p.teleport(arenaLobby);
             
             if (players.size()==1) {
                 startCountdown();
@@ -536,9 +536,7 @@ Ostrov.log(s.getEntityId()+":"+s.getBodyYaw());
     public void removePlayer(final Player p) {
         if (players.containsKey(p.getName())) {
             final Snake sn = players.remove(p.getName());
-            if (sn!=null) {
-                sn.stop(false);
-            }
+            sn.stop(!players.isEmpty());
             if (players.isEmpty() && (state==GameState.СТАРТ || state == GameState.ЭКИПИРОВКА)) {
                 if (task!=null) {
                     resetGame();
@@ -549,15 +547,13 @@ Ostrov.log(s.getEntityId()+":"+s.getBodyYaw());
                 Oplayer op;
                 for (Player pl : getPlayers()) {
                     op = PM.getOplayer(pl);
-                    op.score.getSideBar().update(p.getName(), "§4§o✖ §m"+getChatColor(p.getName()) + p.getName());
+                    op.score.getSideBar().update(p.getName(), "§4§o✖ §m"+sn.getChatColor() + p.getName());
                 }
                 sendArenaData();
             }
         }
     }
-    public String getChatColor(String nik) {
-        return TCUtils.toChat(players.get(nik).color);
-    }
+
     
     public List<Player> getPlayers() {
         final List<Player> list = new ArrayList<>();
@@ -571,7 +567,7 @@ Ostrov.log(s.getEntityId()+":"+s.getBodyYaw());
     }
 
 
-
+/*
     public List<Location> getSpawns() {
         return this.spawns;
     }
@@ -600,27 +596,11 @@ Ostrov.log(s.getEntityId()+":"+s.getBodyYaw());
         this.boundsHigh = location;
     }
 
-    public int getMinPlayers() {
-        return this.minPlayers;
-    }
-
-    public void setMinPlayers(int i) {
-        if (i <= this.maxplayers) {
-            this.minPlayers = i;
-        } else {
-            this.minPlayers = this.maxplayers;
-        }
-    }
-
-    public int getMaxPlayers() {
-        return this.maxplayers;
-    }
 
     public void addSpawn(Location location) {
         this.spawns.add(location);
-        this.maxplayers = this.spawns.size();
     }
-
+*/
     public void SendAB(final String text) {
         arenaLobby.getWorld().getPlayers().stream().forEach((p) -> {
             ApiOstrov.sendActionBarDirect(p, text);
@@ -629,7 +609,7 @@ Ostrov.log(s.getEntityId()+":"+s.getBodyYaw());
 
     public void SendSound(final Sound s) {
         arenaLobby.getWorld().getPlayers().stream().forEach((p) -> {
-            p.playSound(p.getLocation(), s, 5.0F, 5.0F);
+            p.playSound(p.getEyeLocation(), s, 5.0F, 5.0F);
         });
     }
 
@@ -707,7 +687,16 @@ Ostrov.log(s.getEntityId()+":"+s.getBodyYaw());
     }
 
     public void sendArenaData() {
-        GM.sendArenaData(Game.SN, arenaName, state, players.size(), "§2§l§oЗмейка", "§5"+arenaName, state.displayColor+state.name(), "§6Игроки: §2"+players.size());
+        GM.sendArenaData(
+                Game.SN, 
+                arenaName, 
+                state, 
+                players.size(), 
+                "§2§l§oЗмейка",
+                "§5"+arenaName, 
+                state.displayColor+state.name(),
+                "§6Игроки: §2"+players.size()
+        );
     } 
 
     @Override

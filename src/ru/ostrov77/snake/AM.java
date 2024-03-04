@@ -2,20 +2,33 @@ package ru.ostrov77.snake;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map.Entry;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.bukkit.util.Vector;
+import ru.komiss77.ApiOstrov;
+import ru.komiss77.Config;
+import ru.komiss77.Ostrov;
+import ru.komiss77.enums.GameState;
 import ru.komiss77.objects.CaseInsensitiveMap;
+import ru.komiss77.utils.LocationUtil;
+import ru.komiss77.utils.OstrovConfig;
+import ru.komiss77.utils.OstrovConfigManager;
 import ru.ostrov77.minigames.MG;
 
 public class AM {
 
+    public static final OstrovConfigManager manager;
+    private static final OstrovConfig config;
     public static final CaseInsensitiveMap<Arena> arenas;
     public static final List<File> songs = new ArrayList<>();
-
+    public static boolean save;
+    
     static {
+        manager = new OstrovConfigManager(Main.getInstance());
+        config = manager.getNewConfig("config.yml");
         arenas = new CaseInsensitiveMap();
         File[] files = new File(Main.getInstance().getDataFolder().getPath() + "/songs/").listFiles();
         for (File f : files) {
@@ -25,34 +38,67 @@ public class AM {
         }   
     }
 
+
+    
+    public static void saveAll() {
+            
+        for ( Arena a : AM.arenas.values()) {
+
+            config.set( "arenas." + a.arenaName+ ".arenaLobby" , LocationUtil.toDirString(a.arenaLobby) );
+            config.set( "arenas." + a.arenaName+ ".boundsLow" , LocationUtil.toDirString(a.boundsLow) );
+            config.set( "arenas." + a.arenaName+ ".boundsHigh", LocationUtil.toDirString(a.boundsHigh) );
+
+            final List<String> list = new ArrayList<>();
+            for (Location spawnpoint : a.spawns) {
+                list.add(LocationUtil.toDirString(spawnpoint));
+            }
+            config.set("arenas." + a.arenaName+ ".spawnPoints", ApiOstrov.toString(list, false));
+        }
+        config.saveConfig();
+    }
+
+
+
+    public static void loadAll() {
+
+        if (config.getConfigurationSection("arenas")!=null) {
+            config.getConfigurationSection("arenas").getKeys(false).stream().forEach( arenaName -> {
+                
+                final List<Location> spawnPoints = new ArrayList<>();
+                for (String s : config.getString("arenas."+arenaName+".spawnPoints").split(",")) {
+                    spawnPoints.add(LocationUtil.stringToLoc(s, true, true));
+                }
+                
+                final Arena arena = new Arena(
+                        spawnPoints, 
+                        arenaName,
+                        LocationUtil.stringToLoc(config.getString("arenas."+arenaName+".arenaLobby"), false, true),
+                        LocationUtil.stringToLoc(config.getString("arenas."+arenaName+".boundsLow"), false, true),
+                        LocationUtil.stringToLoc(config.getString("arenas."+arenaName+".boundsHigh"), false, true)
+                );
+                
+                if (spawnPoints.isEmpty() || arena.arenaLobby==null || arena.boundsLow==null || arena.boundsHigh==null) {
+                    Main.log_err("Арена "+arenaName+" - проблема с локациями.");
+                } else {
+                    arena.state = GameState.ОЖИДАНИЕ;
+                }
+                arena.sendArenaData();
+                arenas.put(arenaName, arena);
+                MG.arenas.put(arenaName, arena);
+            });
+        }
+
+    }
+
+
     public static Arena createArena(Location firstspawn, String name) {
-
-        ArrayList spawns = new ArrayList();
-        spawns.add(firstspawn);
-
-        Arena arena = new Arena(spawns, name, (Location) null, (Location) null, (Location) null, 2);
+        Arena arena = new Arena(Arrays.asList(firstspawn), name, (Location) null, (Location) null, (Location) null);
         arenas.put(name, arena);
         MG.arenas.put(name, arena);
+        save = true;
         return arena;
     }
 
-    public static boolean CanCreate(Player p) {
-        boolean can = true;
-        for (Entry<String, Arena> e : arenas.entrySet()) {
-            if (e.getValue().getSpawns().get(0).getWorld().getName().equals(p.getWorld().getName())) {
-                can = false;
-            }
-        }
-        return can;
-    }
-
-    public static void LoadArena(List spawns, String arenaName, Location arenaLobby, Location boundsLow, Location boundsHigh, int minPlayers) {
-//System.out.println("Load: "+name+" spawns:"+spawns +" arenaLobby:"+arenaLobby+" boundsLow:"+boundsLow+" boundsHigh:"+boundsHigh+" minPlayers:"+minPlayers);  
-        Arena arena = new Arena(spawns, arenaName, arenaLobby, boundsLow, boundsHigh, minPlayers);
-        arenas.put(arenaName, arena);
-        MG.arenas.put(arenaName, arena);
-        //GM.sendArenaData(Game.SN, arenaName, arena.state, 0, arena.state.displayColor+arena.state.name(), "", arena.state.displayColor+arena.state.name(), "");
-    }
 
 
     public static Arena getArena(String s) {
@@ -66,7 +112,7 @@ public class AM {
 
     public static Arena getArenaByWorld(String w) {
         for (Arena a : arenas.values()) {
-            if (a.getArenaLobby().getWorld().getName().equals(w)) {
+            if (a.arenaLobby.getWorld().getName().equals(w)) {
                 return a;
             }
 
@@ -100,31 +146,6 @@ public class AM {
         return location.getX() >= (double) i && location.getX() <= (double) k && location.getZ() >= (double) j && location.getZ() <= (double) l;
     }
 
-    public static void addSpawn(Location location, String s) {
-        Arena arena = AM.getArena(s);
-        if (arena != null) {
-            arena.addSpawn(location);
-        }
-    }
-
-    public static void setArenaLobby(Location location, String s) {
-        Arena arena = AM.getArena(s);
-        arena.setArenaLobby(location);
-    }
-
-    public static void setBoundsHigh(Location location, String s) {
-        Arena arena = AM.getArena(s);
-        if (arena != null) {
-            arena.setBoundsHigh(location);
-        }
-    }
-
-    public static void setBoundsLow(Location location, String s) {
-        Arena arena = AM.getArena(s);
-        if (arena != null) {
-            arena.setBoundsLow(location);
-        }
-    }
 
 
 }

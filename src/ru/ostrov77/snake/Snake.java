@@ -22,6 +22,7 @@ import org.bukkit.util.BoundingBox;
 import org.bukkit.util.Vector;
 import ru.komiss77.Ostrov;
 import ru.komiss77.enums.GameState;
+import ru.komiss77.utils.TCUtils;
 
 public class Snake implements Runnable {
 
@@ -32,13 +33,13 @@ public class Snake implements Runnable {
     private int tick = 1; //или все % сработаюи на 0
     public final Arena arena;
     public String playerName;
-    private String collided;
+    private Snake collide;
 
     private BukkitTask task;
 
     public final List<Entity> tail;
 
-    public DyeColor color = DyeColor.WHITE;
+    public DyeColor color;
     public int kills, coin;
     private int speedBoost;
 
@@ -84,11 +85,11 @@ public class Snake implements Runnable {
         if (arena.state == GameState.ИГРА) {
             
             //поиск столкновений
-            if (tick > 60 && tick % 2 == 0 && collided == null && arena.state == GameState.ИГРА) {
+            if (tick > 60 && tick % 2 == 0 && collide == null && arena.state == GameState.ИГРА) {
                 Entity sheep;
-                final BoundingBox playerBox = p.getBoundingBox();//.expand(0.3, 0.3, 0.3);
+                final BoundingBox playerBox = p.getBoundingBox().expand(0.5, 0.5, 0.5);
                 for (Snake snake : arena.players.values()) {            //перебираем змейки арены
-                    if (collided != null) {
+                    if (collide != null) {
                         break; //обработка одного столкновения за тик!
                     }
                     for (int i = 0; i < snake.tail.size(); i++) {
@@ -101,26 +102,30 @@ public class Snake implements Runnable {
                             if (!snake.playerName.equals(playerName)) { //столкнулся НЕ со своими - начисляем вынос
                                 kills++;
                             }
-                            collided = snake.playerName;
+                            collide = snake;
                             break;
                         }
                     }
                 }
 
-                if (collided != null) { //игрок столкнулся с овцой
-                    arena.collide(p, collided);
-                    collided = null; //сброс для следующего
+                if (collide != null) { //игрок столкнулся с овцой
+                    if (playerName.equals(collide.playerName)) {
+                        arena.SendAB(getChatColor()+playerName + " §6стoлкнулся со своей змейкой!");
+                    } else {
+                        arena.SendAB(getChatColor()+playerName+" §a6врезался в змейку "+collide.getChatColor()+collide.playerName+"§6!");
+                    }
+                    arena.collide(p);
+                    collide = null; //сброс для следующего
                     return; //пропустить действия ниже!
                 }
                 
-                playerBox.expand(1);
-                if (!arena.add.isEmpty() && tick%3==0) {
-                    for (int i = arena.add.size()-1; i>=0; i--) {
-                        sheep = arena.add.get(i);
+                playerBox.expand(0.5, 0.5, 0.5);
+                if (!arena.grow.isEmpty() && tick%3==0) {
+                    for (int i = arena.grow.size()-1; i>=0; i--) {
+                        sheep = arena.grow.get(i);
                         if (playerBox.overlaps(sheep.getBoundingBox())) {
-//Ostrov.log("overlaps?"+playerBox.overlaps(sheep.getBoundingBox())+" BoundingBox="+sheep.getBoundingBox());
                             sheep.remove();
-                            arena.add.remove(i);
+                            arena.grow.remove(i);
                             addSheep(p);
                             p.playSound(sheep.getLocation(), Sound.BLOCK_HONEY_BLOCK_STEP, 1.0F, 9.9F);
                         }
@@ -128,7 +133,6 @@ public class Snake implements Runnable {
                 }
 
             }
-
 
             if (speedBoost > 0) {
                 --speedBoost;
@@ -191,37 +195,7 @@ public class Snake implements Runnable {
         tick++;
 
     }
-    /* UC
-        public void onUpdate() {
-        if (getPlayer() == null) return;
-        Vector vel = getPlayer().getLocation().getDirection().setY(0).normalize().multiply(4);
 
-        Creature before = null;
-        for (int i = 0; i < tail.size(); i++) {
-            Creature tailEnt = tail.get(i);
-            Location loc = getPlayer().getLocation().add(vel);
-            if (i == 0) {
-                loc = tailEnt.getLocation().add(vel);
-            }
-            if (before != null) {
-                loc = before.getLocation();
-            }
-            if (loc.toVector().subtract(tailEnt.getLocation().toVector()).length() > 12.0D) {
-                loc = tailEnt.getLocation().add(traj(tailEnt.getLocation(), loc).multiply(12));
-            }
-            if (before != null) {
-                Location tp = before.getLocation().add(traj2D(before, tailEnt).multiply(1.4D));
-                tp.setPitch(tailEnt.getLocation().getPitch());
-                tp.setYaw(tailEnt.getLocation().getYaw());
-                tailEnt.teleport(tp);
-            }
-
-            BukkitBrain.getBrain(tailEnt).getController().moveTo(loc);
-
-            before = tailEnt;
-        }
-    }
-    */
     private Vector traj2D(final Entity a, final Entity b) {
         return b.getLocation().toVector().subtract(a.getLocation().toVector()).setY(0).normalize();
     }
@@ -238,46 +212,15 @@ public class Snake implements Runnable {
         final Entity lastSheep = tail.get(tail.size() - 1);
         Location loc = lastSheep.getLocation();//p.getLocation();
         if (tail.size()>1) {
-            //final Vector v = tail.get(tail.size() - 2).getLocation().toVector().subtract(loc.toVector()).setY(0).normalize();
-            //loc.add(v);
             loc.add(traj(tail.get(tail.size() - 2), lastSheep));
         } else {
             loc.subtract(lastSheep.getLocation().getDirection().setY(0));//loc.subtract(p.getLocation().getDirection().setY(0));
         }
         loc.setDirection(lastSheep.getLocation().getDirection());
-        //if (tail.size()>1) {
-        //    final Vector v = tail.get(tail.size() - 2).getLocation().toVector().subtract(target.getLocation().toVector()).setY(0).normalize();
-        //    loc.add(v);
-       // } else {
-        //    loc.subtract(target.getLocation().getDirection().setY(0));
-       // }
-        
         spawnSheep(loc);
     }
     
-    
-        /* UC
-        public void addSheepToTail(int amount) {
-        Player player = getPlayer();
-        for (int i = 0; i < amount; i++) {
-            Location loc = player.getLocation();
-            if (!tail.isEmpty()) {
-                loc = lastTail().getLocation();
-            }
-            if (tail.size() > 1) {
-                loc.add(traj(tail.get(tail.size() - 2), lastTail()));
-            } else {
-                loc.subtract(player.getLocation().getDirection().setY(0));
-            }
-            Sheep tailEnt = (loc.getWorld().spawn(loc, Sheep.class));
-            tailEnt.setNoDamageTicks(Integer.MAX_VALUE);
-            tailEnt.setRemoveWhenFarAway(false);
-            tailEnt.teleport(loc);
-            tail.add(tailEnt);
-            tailEnt.setColor(DyeColor.values()[color]);
-        }
-    }
-    */    
+
     private Entity spawnSheep(final Location loc) {
         
         final Sheep newSheep = (Sheep) loc.getWorld().spawnEntity(loc, EntityType.SHEEP);
@@ -288,7 +231,7 @@ public class Snake implements Runnable {
         Bukkit.getMobGoals().removeAllGoals(newSheep);
         ((LivingEntity) newSheep).getAttribute(Attribute.GENERIC_MOVEMENT_SPEED).setBaseValue(DEFAULT_SPEED);
         
-        if (!tail.isEmpty()) { //(target.getType() != EntityType.PLAYER) { //для всех, кроме первой
+        if (!tail.isEmpty()) {//для всех, кроме первой
             final Entity lastSheep = tail.get(tail.size() - 1);
             final FollowGoal goal = new FollowGoal((Mob) newSheep, (LivingEntity) lastSheep, arena);
             Bukkit.getMobGoals().addGoal(newSheep, 1, goal);
@@ -323,7 +266,7 @@ public class Snake implements Runnable {
                     Item item = sheep.getLocation().getWorld().dropItem(sheep.getLocation(), new ItemStack(Material.SUNFLOWER, 1));
                     item.setVelocity(new Vector(0, 1, 0));
                     item.setPickupDelay(1);
-                    //item.setGlowing(true);
+                    item.setGlowing(true);
                 }
                 sheep.remove();
             }
@@ -354,7 +297,65 @@ public class Snake implements Runnable {
         }
     }
 
+    public String getChatColor() {
+        return color == null ? "§7" : TCUtils.toChat(color);
+    }
+
 
 
 }
 
+    /* UC
+        public void onUpdate() {
+        if (getPlayer() == null) return;
+        Vector vel = getPlayer().getLocation().getDirection().setY(0).normalize().multiply(4);
+
+        Creature before = null;
+        for (int i = 0; i < tail.size(); i++) {
+            Creature tailEnt = tail.get(i);
+            Location loc = getPlayer().getLocation().add(vel);
+            if (i == 0) {
+                loc = tailEnt.getLocation().add(vel);
+            }
+            if (before != null) {
+                loc = before.getLocation();
+            }
+            if (loc.toVector().subtract(tailEnt.getLocation().toVector()).length() > 12.0D) {
+                loc = tailEnt.getLocation().add(traj(tailEnt.getLocation(), loc).multiply(12));
+            }
+            if (before != null) {
+                Location tp = before.getLocation().add(traj2D(before, tailEnt).multiply(1.4D));
+                tp.setPitch(tailEnt.getLocation().getPitch());
+                tp.setYaw(tailEnt.getLocation().getYaw());
+                tailEnt.teleport(tp);
+            }
+
+            BukkitBrain.getBrain(tailEnt).getController().moveTo(loc);
+
+            before = tailEnt;
+        }
+    }
+    */
+        
+        /* UC
+        public void addSheepToTail(int amount) {
+        Player player = getPlayer();
+        for (int i = 0; i < amount; i++) {
+            Location loc = player.getLocation();
+            if (!tail.isEmpty()) {
+                loc = lastTail().getLocation();
+            }
+            if (tail.size() > 1) {
+                loc.add(traj(tail.get(tail.size() - 2), lastTail()));
+            } else {
+                loc.subtract(player.getLocation().getDirection().setY(0));
+            }
+            Sheep tailEnt = (loc.getWorld().spawn(loc, Sheep.class));
+            tailEnt.setNoDamageTicks(Integer.MAX_VALUE);
+            tailEnt.setRemoveWhenFarAway(false);
+            tailEnt.teleport(loc);
+            tail.add(tailEnt);
+            tailEnt.setColor(DyeColor.values()[color]);
+        }
+    }
+    */    

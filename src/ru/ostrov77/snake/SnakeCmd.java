@@ -57,14 +57,13 @@ public class SnakeCmd implements CommandExecutor, TabCompleter {
         if (args.length == 0) {
             cs.sendMessage("join <арена>");
             cs.sendMessage("leave");
+            cs.sendMessage("start <арена>");
             if ( ApiOstrov.isLocalBuilder(p, false)) {
                 cs.sendMessage("create <арена>");
                 cs.sendMessage("addspawn <арена>");
                 cs.sendMessage("setlobby <арена>");
                 cs.sendMessage("posh <арена>");
                 cs.sendMessage("posl <арена>");
-                cs.sendMessage("setminplayers <арена>");
-                cs.sendMessage("start <арена>");
                 cs.sendMessage("stop <арена>"); 
             }
             return false;
@@ -86,15 +85,15 @@ public class SnakeCmd implements CommandExecutor, TabCompleter {
                     } else if (arena.arenaName == null) {
                         p.sendMessage("§4Арена испортилась - нет названия..");
                         return true;
-                    } else if (arena.getArenaLobby() == null) {
+                    } else if (arena.arenaLobby == null) {
                         p.sendMessage("§4Арена испортилась - нет лобби ожидания..");
                         return true;
-                    } else if (arena.getSpawns() == null || arena.getSpawns().isEmpty()) {
+                    } else if (arena.spawns == null || arena.spawns.isEmpty()) {
                         p.sendMessage("§4Арена испортилась - нет стартовых точек..");
                         return true;
                     }
                     if (arena.state == GameState.ОЖИДАНИЕ || arena.state == GameState.СТАРТ) {
-                        if (arena.getPlayers().size() + 1 > arena.getSpawns().size()) {
+                        if (arena.getPlayers().size() + 1 > arena.spawns.size()) {
                             p.sendMessage("§4Арена заполнена!");
                         } else {
                             arena.addPlayer(p);
@@ -148,16 +147,24 @@ public class SnakeCmd implements CommandExecutor, TabCompleter {
 
         } else {
 
-            if (AM.ArenaExist(args[1])) 
+            if (AM.ArenaExist(args[1])) {
                 cs.sendMessage("Арена с таким названием уже есть!");
-            else if (!AM.CanCreate((Player) cs))
-                cs.sendMessage("В этом мире уже есть арена!");
-            else if ( p.getWorld().getName().equals(Bukkit.getWorlds().get(0).getName()))
-                cs.sendMessage("В этом мире нельзя добавить арену! Это глобальное лобби");
-            else {
-                AM.createArena( ((Player) cs).getLocation(), args[1]);
-                cs.sendMessage("Создана арена "+args[1]+" !");
+                return true;
             }
+            for ( Arena a : AM.arenas.values()) {
+                if (a.spawns.get(0).getWorld().getName().equals(p.getWorld().getName())) {
+                    cs.sendMessage("В этом мире уже есть арена!");
+                    return true;
+                }
+            }
+            
+            if ( p.getWorld().getName().equals(Bukkit.getWorlds().get(0).getName())) {
+                cs.sendMessage("В этом мире нельзя добавить арену! Это глобальное лобби");
+                return true;
+            }
+            
+            AM.createArena( ((Player) cs).getLocation(), args[1]);
+            cs.sendMessage("Создана арена "+args[1]+" !");
 
         }
 
@@ -184,8 +191,9 @@ public class SnakeCmd implements CommandExecutor, TabCompleter {
                         return true;
                     }
 
-                    AM.setBoundsLow(((Player) cs).getLocation(), args[1]);
+                    AM.getArena(args[1]).boundsLow = (((Player) cs).getLocation());
                     cs.sendMessage("§bSuccessfully set lower bound!");
+                    AM.save = true;
                 }
 
                 return true;
@@ -256,12 +264,13 @@ public class SnakeCmd implements CommandExecutor, TabCompleter {
                             return true;
                         }
 
-                        if (AM.getArena(args[1]).getBoundsLow() == null) {
-                            AM.setBoundsLow(((Player) cs).getLocation(), args[1]);
+                        if (AM.getArena(args[1]).boundsLow == null) {
+                            AM.getArena(args[1]).boundsLow = (((Player) cs).getLocation());
                         }
 
-                        AM.setBoundsHigh(((Player) cs).getLocation(), args[1]);
+                        AM.getArena(args[1]).boundsHigh = (((Player) cs).getLocation());
                         cs.sendMessage("§bSuccessfully set higher bound!");
+                        AM.save = true;
                     }
 
                     return true;
@@ -304,13 +313,14 @@ public class SnakeCmd implements CommandExecutor, TabCompleter {
                             return true;
                         }
 
-                        if (AM.getArena(args[1]).getPlayers().size() > 0) {
+                        if (!AM.getArena(args[1]).getPlayers().isEmpty()) {
                             cs.sendMessage("§cThat arena has players in it. Please stop the game before performing this operation.");
                             return true;
                         }
 
-                        AM.addSpawn(((Player) cs).getLocation(), args[1]);
+                        AM.getArena(args[1]).spawns.add(((Player) cs).getLocation());
                         cs.sendMessage("§bYou have added a new spawn point at your location!");
+                        AM.save = true;
                     }
 
                     return true; 
@@ -322,53 +332,12 @@ public class SnakeCmd implements CommandExecutor, TabCompleter {
 
                             
                             
-        }   else if (args[0].equalsIgnoreCase("setminplayers")) {
-            if (args.length == 3) {
-                if (AM.getArena(args[1]) == null) {
-                    cs.sendMessage("§cНет арены "+args[1]);
-                    return true;
-                }
-
-                int i;
-
-                try {
-                    i = Integer.valueOf(args[2]);
-                } catch (Exception exception) {
-                    cs.sendMessage("§cThe third argument is not a valid int!");
-                    return true;
-                }
-
-                AM.getArena(args[1]).setMinPlayers(i);
-                cs.sendMessage("§bSuccessfully set the min players to " + args[2] + "!");
-            } else {
-                cs.sendMessage("§cProper usage of the command goes like this: /snake setminplayers <arena name> <int>");
-            }
-
-            return true;
-            
-            
-            
-            
-            
-            
         } 
 
-                
-                return true;
-            }
-            
-            
-            
-      /*  } else {
-            if (AM.isInGame((Player) commandsender)) {
-                AM.removePlayer((Player) commandsender, 0);
-                commandsender.sendMessage(ChatColor.translateAlternateColorCodes("&".charAt(0), Messages.playerLeaveArenaMessage));
-            } else {
-                commandsender.sendMessage(ChatColor.translateAlternateColorCodes("&".charAt(0), Messages.playerLeaveNotInArena));
-            }
 
-            return true;
-        }*/
-            
-            
+        return true;
+    }
+
+
+
     }

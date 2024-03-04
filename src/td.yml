@@ -1,21 +1,11 @@
 ## YAML Template.
 ---
 
-вместо яблок - мигающие разноцветные овечки
-алмаз быстрый старт не удаляется
+не вход на ферму после рестарта
+точку входа в игру в MG - крутящаяся овца
++золото выпадает только из овец противников!
+сохранять топ на аренах - БД
 
-золото выпадает только из овец противников!
-сохранять топ на аренах
-
-убрать выбор карты
-
-переделать ShopManager
-овца застряла в воде и утонула
-золото выпадать только из 2+ змейки
-
-добавить время
-
-передел магазин, таблички, убрать moveevent
 
 
 
@@ -24,17 +14,3 @@ item1.getLocation().getWorld().playEffect(item1.getLocation(), Effect.MOBSPAWNER
 p.getWorld().playEffect(p.getLocation(), Effect.ZOMBIE_DESTROY_DOOR, 1);
 p.getWorld().playEffect(p.getLocation(), Effect.ZOMBIE_CHEW_IRON_DOOR, 1);
 p.getWorld().playEffect(block1.getLocation(), Effect.SMOKE, 1);
-
- new ActionbarTitleObject ("§4.").send(player);  
-
-
-p.getWorld().playSound(p.getLocation(), Sound.ENTITY_CAT_HISS , 0.8f, 2.0f);
-
-(new TitleObject (("§4У вас не выбран навык!"), TitleObject.TitleType.TITLE)).setFadeIn(40).setStay(80).setFadeOut(5).send(p);
-(new TitleObject (("§fСейчас мы откроем Вам меню выбора навыка!"), TitleObject.TitleType.SUBTITLE)).setFadeIn(40).setStay(80).setFadeOut(5).send(p);
-
-new BukkitRunnable(){ 
-@Override
-public void run() {
-///////////////////////////                            
-}}.runTaskTimerAsynchronously(Main.getPlugin(Main.class), 20L , 20L);        

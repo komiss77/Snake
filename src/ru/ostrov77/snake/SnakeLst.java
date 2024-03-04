@@ -135,7 +135,7 @@ public class SnakeLst implements Listener {
             if (arena != null && arena.state==GameState.ИГРА) {
                 Snake snake = arena.players.get(p.getName());
                 if (snake!=null ) {
-                    snake.speedBoost(Files.speedboostTimeTicks, Material.FEATHER);
+                    snake.speedBoost(70, Material.FEATHER);
                 }
                 if (e.getItem().getAmount()==1) {
                     if (e.getHand()==EquipmentSlot.HAND) p.getInventory().getItemInMainHand().setType(Material.AIR);
@@ -163,7 +163,7 @@ public class SnakeLst implements Listener {
                     if (i.getItemStack().getType() == Material.SUGAR) {
                         //if (i.isGlowing()) return;
                         pickupEffect(i);
-                        snake.speedBoost(Files.speedboostTimeTicks, Material.SUGAR);
+                        snake.speedBoost(70, Material.SUGAR);
                     }// else if (i.getItemStack().getType() == Material.ENCHANTED_GOLDEN_APPLE) {
                     //    pickupEffect(i);
                     //    snake.addSheep(p);
@@ -178,7 +178,7 @@ public class SnakeLst implements Listener {
                         Oplayer op;
                         for (Player pl : arena.getPlayers()) {
                             op = PM.getOplayer(pl);
-                            op.score.getSideBar().update(p.getName(), arena.getChatColor(p.getName())+p.getName()+" §6§l"+snake.coin);
+                            op.score.getSideBar().update(p.getName(), snake.getChatColor()+p.getName()+" §6§l"+snake.coin);
                         }
                     }
                 }
