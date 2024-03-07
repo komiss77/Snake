@@ -1,6 +1,6 @@
 api-version: 1.16
 name: Snake
-main: ru.ostrov77.snake.Main
+main: ru.ostrov77.snake.SN
 version: 2.0
 depend: [Ostrov]
 softdepend: [NoteBlockAPI]

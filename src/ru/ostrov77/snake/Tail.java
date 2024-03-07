@@ -24,7 +24,7 @@ import ru.komiss77.Ostrov;
 import ru.komiss77.enums.GameState;
 import ru.komiss77.utils.TCUtils;
 
-public class Snake implements Runnable {
+public class Tail implements Runnable {
 
     public static final double DEFAULT_SPEED = 0.35D; //SPEED_ORIG=0.23000000417232513
     public static final double SUGAR_BOOSTED_SPEED = 0.45D;//0.55D;
@@ -33,18 +33,18 @@ public class Snake implements Runnable {
     private int tick = 1; //или все % сработаюи на 0
     public final Arena arena;
     public String playerName;
-    private Snake collide;
+    private Tail collide;
 
     private BukkitTask task;
 
-    public final List<Entity> tail;
+    public final List<Sheep> tail;
 
     public DyeColor color;
     public int kills, coin;
     private int speedBoost;
 
     
-    public Snake(final Player p, final Arena arena) {
+    public Tail(final Player p, final Arena arena) {
         playerName = p.getName();
         this.arena = arena;
         tail = new ArrayList<>();
@@ -56,10 +56,10 @@ public class Snake implements Runnable {
         final Location to = arena.arenaLobby;
         final Vector v = to.clone().subtract(loc).toVector().normalize();
         loc.setDirection(v);
-        final Entity masterSheep = Snake.this.spawnSheep(loc);
+        final Entity masterSheep = Tail.this.spawnSheep(loc);
         if (masterSheep != null && masterSheep.isValid()) {
             masterSheep.addPassenger(p);
-            task = Bukkit.getScheduler().runTaskTimer(Ostrov.instance, Snake.this, 1, 1);
+            task = Bukkit.getScheduler().runTaskTimer(Ostrov.instance, Tail.this, 1, 1);
         } else {
             Bukkit.getLogger().info("Unable to spawn first sheep...");
             Bukkit.getLogger().info("The problem is most likely because you have animals disabled, especially if you\'re running Multiverse.");
@@ -88,7 +88,7 @@ public class Snake implements Runnable {
             if (tick > 60 && tick % 2 == 0 && collide == null && arena.state == GameState.ИГРА) {
                 Entity sheep;
                 final BoundingBox playerBox = p.getBoundingBox().expand(0.5, 0.5, 0.5);
-                for (Snake snake : arena.players.values()) {            //перебираем змейки арены
+                for (Tail snake : arena.players.values()) {            //перебираем змейки арены
                     if (collide != null) {
                         break; //обработка одного столкновения за тик!
                     }
@@ -141,9 +141,9 @@ public class Snake implements Runnable {
                 }
             }
             
-            final Entity masterSheep = tail.get(0);
+            final Sheep masterSheep = tail.get(0);
             masterSheep.setRotation(p.getLocation().getYaw(), 0); //ориентация головы как у седока, но только вправо-влево
-            if (tick % 10 == 0) {
+            if (tick % 5 == 0) {
                 Location loc = p.getLocation();
                 loc.setPitch(0);
                 final Vector direction = loc.getDirection();
@@ -152,9 +152,17 @@ public class Snake implements Runnable {
                 final Location moveTo = masterSheep.getLocation().add(direction);
                 final Mob mob = (Mob) masterSheep;
                 mob.getPathfinder().moveTo(moveTo);
-            }
             
-          /*  final Vector vel = p.getLocation().getDirection().setY(0).normalize().multiply(4);
+                Sheep target;
+                Sheep sheep;
+                for (int i = 1; i < tail.size(); i++) {
+                    target = tail.get(i-1);
+                    sheep = tail.get(i);
+                    sheep.getPathfinder().moveTo(target);
+                }
+            
+            }
+           /* final Vector vel = p.getLocation().getDirection().setY(0).normalize().multiply(4);
 
             Mob before = null;
             for (int i = 0; i < tail.size(); i++) {
@@ -234,7 +242,7 @@ public class Snake implements Runnable {
         if (!tail.isEmpty()) {//для всех, кроме первой
             final Entity lastSheep = tail.get(tail.size() - 1);
             final FollowGoal goal = new FollowGoal((Mob) newSheep, (LivingEntity) lastSheep, arena);
-            Bukkit.getMobGoals().addGoal(newSheep, 1, goal);
+            //Bukkit.getMobGoals().addGoal(newSheep, 1, goal);
         }
         tail.add(newSheep);
         return newSheep;
@@ -244,37 +252,38 @@ public class Snake implements Runnable {
 
 
     public void stop(final boolean drop) {
-        if (task != null) {
-            task.cancel();
-            task = null;
+        if (task == null) return;
+        task.cancel();
+        task = null;
 
-            for (Entity sheep : tail) {
-                if (sheep == null || sheep.isDead()) {
-                    continue;
-                }
-
-                if (!sheep.getPassengers().isEmpty()) {
-                    for (Entity pass : sheep.getPassengers()) {
-                        sheep.removePassenger(pass);
-                        sheep.getWorld().playSound(sheep.getLocation(), Sound.ENTITY_GHAST_SHOOT, 0.8f, 2.0f); //скорее всего это будет первая, чтобы не брать игрока
-                    }
-                }
-                sheep.getWorld().playEffect(sheep.getLocation(), Effect.GHAST_SHOOT, 0);
-
-                //золото выпадать только из 2+ змейки, в одиночке выпадать не будет!
-                if (drop) { 
-                    Item item = sheep.getLocation().getWorld().dropItem(sheep.getLocation(), new ItemStack(Material.SUNFLOWER, 1));
-                    item.setVelocity(new Vector(0, 1, 0));
-                    item.setPickupDelay(1);
-                    item.setGlowing(true);
-                }
-                sheep.remove();
+        for (Sheep sheep : tail) {
+            if (sheep == null || sheep.isDead()) {
+                continue;
             }
 
-            tail.clear();
-            kills = 0;
+            if (!sheep.getPassengers().isEmpty()) {
+                for (Entity pass : sheep.getPassengers()) {
+                    sheep.removePassenger(pass);
+                    sheep.getWorld().playSound(sheep.getLocation(), Sound.ENTITY_GHAST_SHOOT, 0.8f, 2.0f); //скорее всего это будет первая, чтобы не брать игрока
+                }
+            }
+            sheep.getWorld().playEffect(sheep.getLocation(), Effect.GHAST_SHOOT, 0);
 
+            //золото выпадать только из 2+ змейки, в одиночке выпадать не будет!
+            if (drop) {
+                Item item = sheep.getLocation().getWorld().dropItem(sheep.getLocation(), new ItemStack(Material.SUNFLOWER, 1));
+                item.setVelocity(new Vector(0, 1, 0));
+                item.setPickupDelay(1);
+                item.setGlowing(true);
+            } else {
+               sheep.setAI(false);
+               
+            }
+            //sheep.remove();
         }
+
+        tail.clear();
+        kills = 0;
 
     }
 

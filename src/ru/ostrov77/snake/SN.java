@@ -16,9 +16,9 @@ import ru.komiss77.utils.inventory.SmartInventory;
 
 
 
-public class Main extends JavaPlugin implements Listener {
+public class SN extends JavaPlugin implements Listener {
 
-    private static Main instance;       
+    private static SN instance;       
     public static MenuItem colorChoice;
             
 @Override
@@ -26,8 +26,8 @@ public class Main extends JavaPlugin implements Listener {
         instance = this;
     }
 
-    public static final Main getInstance() { 
-        return Main.instance; 
+    public static final SN getInstance() { 
+        return SN.instance; 
     }
        
        

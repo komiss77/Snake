@@ -28,7 +28,6 @@ import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Sheep;
 import org.bukkit.util.Vector;
 import ru.komiss77.ApiOstrov;
-import ru.komiss77.Ostrov;
 import ru.komiss77.enums.Game;
 import ru.komiss77.enums.GameState;
 import ru.komiss77.enums.Stat;
@@ -58,14 +57,14 @@ public class Arena implements IArena {
     private BukkitTask task, sheepTask;
 
     public List <Sheep> grow = new ArrayList<>();
-    public HashMap<String, Snake> players = new HashMap();
+    public HashMap<String, Tail> players = new HashMap();
 
     private int cdCounter = 30;//ожид в лобби арены
     private int prestart = 7;//ожид сидя на овцах
     private int gameTime = 150;
     public int pickupGold = 0;
     private int ending = 20;//салюты,награждения
-
+    private boolean soloGame;
     
     public Arena(final List<Location> spawns, final String name, final Location arenaLobby, final Location boundsLow, final Location boundsHigh) {
         this.arenaName = name;
@@ -96,6 +95,7 @@ public class Arena implements IArena {
         gameTime = 150;
         ending = 20;
         pickupGold = 0;
+        soloGame = false;
         StopMusic();
         state = GameState.ОЖИДАНИЕ;
         sendArenaData();
@@ -131,7 +131,7 @@ public class Arena implements IArena {
                 }
 
             }
-        }).runTaskTimer(Main.getInstance(), 0L, 20L);
+        }).runTaskTimer(SN.getInstance(), 0L, 20L);
     }
 
     public void forceStart(Player p) {
@@ -154,14 +154,14 @@ public class Arena implements IArena {
 
         int i = 0;
         final EnumSet colors = EnumSet.noneOf(DyeColor.class);
-        for (Snake sn : players.values()) {
+        for (Tail sn : players.values()) {
             if (sn.color !=null) {
                 colors.add(sn.color);
             }
         }
         
         DyeColor color;
-        Snake sn;
+        Tail sn;
         
         for (Player p : getPlayers()) {
             p.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, 5, 1));
@@ -182,7 +182,7 @@ public class Arena implements IArena {
             }
 
             sn.start(p);
-
+            soloGame = players.size()==1;
           /*  if (Shop.selected.containsKey(p.getUniqueId())) {
                 if (((String) Shop.selected.get(p.getUniqueId())).contains("fastsnake")) {
                     p.getInventory().setItem(0, new ItemStack(Material.FEATHER, 10));
@@ -215,7 +215,7 @@ public class Arena implements IArena {
                 }
                 
             }
-        }).runTaskTimer(Main.getInstance(), 0L, 20L);
+        }).runTaskTimer(SN.getInstance(), 0L, 20L);
         
         sheepTask = (new BukkitRunnable() {
             int t;
@@ -268,7 +268,7 @@ public class Arena implements IArena {
                 });
                 t++;
             }
-        }).runTaskTimer(Main.getInstance(), 0L, 1);
+        }).runTaskTimer(SN.getInstance(), 0L, 1);
 
     }
 
@@ -295,7 +295,7 @@ public class Arena implements IArena {
                 if (gameTime==0) {
                     this.cancel();
                     SendTitle("", "Игра окончена!");
-                    endGame(true); 
+                    endGame(EndCause.TimeOut); 
                     return;
                 } else if (players.isEmpty()) {
                     this.cancel();
@@ -313,7 +313,7 @@ public class Arena implements IArena {
                 sendArenaData();
                 
                 Oplayer op;
-                Snake sn;
+                Tail sn;
                 for (Player p : getPlayers()) {
                     op = PM.getOplayer(p);
                     sn = players.get(p.getName());
@@ -325,7 +325,7 @@ public class Arena implements IArena {
                     }
                 }
             }
-        }).runTaskTimer(Main.getInstance(), 0L, 20L);
+        }).runTaskTimer(SN.getInstance(), 0L, 20L);
   
 
         
@@ -394,7 +394,7 @@ public class Arena implements IArena {
 
     
     //либо остался один на поле после столкновений, либо вышло время и все победили
-    public void endGame(final boolean timeOut) {
+    public void endGame(final EndCause cause) {
         if (state != GameState.ИГРА)  return;
         state = GameState.ФИНИШ;
         if (task != null) task.cancel();
@@ -402,9 +402,12 @@ public class Arena implements IArena {
 
         sendArenaData();
 
-        final boolean drop = timeOut || (!timeOut && players.size()==1);
+        //выпадает золото:
+        //всем кто выжил до таймаута
+        //последней оставшейся змейке
+        final boolean drop = cause == EndCause.TimeOut || cause == EndCause.HasWinner;
         for (Player winner : getPlayers()) {
-            final Snake sn = players.get(winner.getName());
+            final Tail sn = players.get(winner.getName());
             if (sn!=null) {
                 sn.stop(drop);
             }
@@ -436,7 +439,7 @@ public class Arena implements IArena {
                             DonatEffect.spawnRandomFirework(winner.getEyeLocation());
                         }
                         if (ending == 5) {
-                            final Snake sn = players.get(winner.getName());
+                            final Tail sn = players.get(winner.getName());
                             winner.sendMessage("§fМонет собрано: §b"+sn.coin+" §f!");
                             ApiOstrov.addStat(winner, Stat.SN_game);
                             ApiOstrov.addStat(winner, Stat.SN_win);
@@ -452,7 +455,7 @@ public class Arena implements IArena {
 
                 --ending;
             }
-        }).runTaskTimer(Main.getInstance(), 0L, 20L);
+        }).runTaskTimer(SN.getInstance(), 0L, 20L);
 
         //final String winner_name = players.keySet().stream().findFirst().get();
      //   if (!timeOut && winner_name != null) {
@@ -483,11 +486,9 @@ public class Arena implements IArena {
     public void collide(final Player who) {
 
         removePlayer(who);
-        if (players.isEmpty()) { //была одиночная игра
+        if (soloGame) { //была одиночная игра
             ending = 5;
-            endGame(false);
-        } else if (players.size()==1) { //остался последний победитель
-            endGame(false);
+            endGame(EndCause.CollideSolo);
         } else {
             MiniGamesLst.spectatorPrepare(who);
             ApiOstrov.sendTitle(who, "", "§4Вы проиграли!");
@@ -496,7 +497,9 @@ public class Arena implements IArena {
             ApiOstrov.addStat(who, Stat.SN_loose);
             who.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, 60, 1));
             who.getWorld().playSound(who.getEyeLocation(), Sound.ENTITY_DONKEY_ANGRY, 0.8f, 2.0f);
-            //players.remove(who.getName());
+            if (players.size()==1) { //остался последний победитель
+                endGame(EndCause.HasWinner);
+            }
             
         }
 
@@ -507,7 +510,7 @@ public class Arena implements IArena {
     
     public void addPlayer(Player p) { //всё проверено
         if (!players.containsKey(p.getName())) {
-            players.put(p.getName(), new Snake(p, this));
+            players.put(p.getName(), new Tail(p, this));
             p.teleport(arenaLobby);
             
             if (players.size()==1) {
@@ -520,7 +523,7 @@ public class Arena implements IArena {
                 }
             }
 
-            Main.colorChoice.giveForce(p);
+            SN.colorChoice.giveForce(p);
             if (p.hasPermission("forcestart")) {
                 MG.forceStart.giveForce(p);
             }
@@ -535,8 +538,8 @@ public class Arena implements IArena {
     // 1-команда leave 2-дисконнект 3-столкнулся с собой или другим
     public void removePlayer(final Player p) {
         if (players.containsKey(p.getName())) {
-            final Snake sn = players.remove(p.getName());
-            sn.stop(!players.isEmpty());
+            final Tail sn = players.remove(p.getName());
+            sn.stop(false); //sn.stop(!players.isEmpty()); золото выпадает только из своих овец - стимул наращивать!
             if (players.isEmpty() && (state==GameState.СТАРТ || state == GameState.ЭКИПИРОВКА)) {
                 if (task!=null) {
                     resetGame();
@@ -704,5 +707,18 @@ public class Arena implements IArena {
         return "snake start "+arenaName;
     }
 
-   
+    @Override
+    public String name() {
+        return arenaName;
+    }
+
+    @Override
+    public GameState state() {
+        return state;
+    }
+    
+    public enum EndCause {
+        TimeOut, HasWinner, CollideSolo;
+    }
+    
 }

@@ -43,6 +43,25 @@ public class SnakeLst implements Listener {
             a.removePlayer(e.getPlayer());
         }
     }    
+     
+    
+    @EventHandler
+    public void onHostileSpawn(CreatureSpawnEvent e) {
+        final Arena a = AM.getArenaByWorld(e.getEntity().getWorld().getName());
+        if (a!=null //if ( !e.getLocation().getWorld().getName().equals(Bukkit.getServer().getWorlds().get(0).getName())
+                && e.getEntity().getType() != EntityType.SHEEP )
+            e.setCancelled(true);
+    }
+
+    
+    //@EventHandler (ignoreCancelled = true, priority = EventPriority.MONITOR)
+   // public void onRemove (final EntityRemoveFromWorldEvent e) {
+    //    Arena a = AM.getArenaByWorld(e.getEntity().getWorld().getName());
+    //    if (a!=null && a.state == GameState.ИГРА) {
+//Ostrov.log("onRemove!!!! "+e.getEntity().getType());
+     //   }
+    //}  
+        
     
     @EventHandler(priority = EventPriority.LOW, ignoreCancelled = true)
     public void onDismount(final EntityDismountEvent e) {
@@ -59,39 +78,22 @@ public class SnakeLst implements Listener {
         }
     }
     
-    //@EventHandler (ignoreCancelled = true, priority = EventPriority.MONITOR)
-   // public void onRemove (final EntityRemoveFromWorldEvent e) {
-    //    Arena a = AM.getArenaByWorld(e.getEntity().getWorld().getName());
-    //    if (a!=null && a.state == GameState.ИГРА) {
-//Ostrov.log("onRemove!!!! "+e.getEntity().getType());
-     //   }
-    //}  
-    
         
     @EventHandler (ignoreCancelled = true, priority = EventPriority.HIGH)
     public void onItemMerge (final ItemMergeEvent e) {
-        Arena a = AM.getArenaByWorld(e.getEntity().getWorld().getName());
+        final Arena a = AM.getArenaByWorld(e.getEntity().getWorld().getName());
         if (a!=null && a.state != GameState.ОЖИДАНИЕ) {
              e.setCancelled(true);
         }
     }    
     
 
-     
-    @EventHandler
-    public void onHostileSpawn(CreatureSpawnEvent e) {
-        if ( !e.getLocation().getWorld().getName().equals(Bukkit.getServer().getWorlds().get(0).getName()) && e.getEntity().getType() != EntityType.SHEEP )
-            e.setCancelled(true);
-
-    }
 
      
     @EventHandler
     public void Damage (EntityDamageEvent e) {
-
         final Player p = (Player) e.getEntity();
         final Arena arena = AM.getArena(p);
-
         if (arena != null) {
             e.setDamage(0);
             p.setFallDistance(0);
@@ -114,16 +116,16 @@ public class SnakeLst implements Listener {
                     p.teleport(p.getWorld().getSpawnLocation());
             }
         }
-
     }
 
      
     @EventHandler
     public void damm(EntityDamageByEntityEvent e) {
-            if (!e.getDamager().isOp()) e.setCancelled(true);
+        if (!e.getDamager().isOp()) {
+            e.setCancelled(true);
+        }
     }
     
-
      
     
     @EventHandler( ignoreCancelled = true, priority = EventPriority.MONITOR)
@@ -133,7 +135,7 @@ public class SnakeLst implements Listener {
             Player p = e.getPlayer();
             final Arena arena = AM.getArena(p);
             if (arena != null && arena.state==GameState.ИГРА) {
-                Snake snake = arena.players.get(p.getName());
+                Tail snake = arena.players.get(p.getName());
                 if (snake!=null ) {
                     snake.speedBoost(70, Material.FEATHER);
                 }
@@ -157,7 +159,7 @@ public class SnakeLst implements Listener {
         final Arena arena = AM.getArena(p);
         if (arena != null) {
             final Item i = e.getItem();
-            final Snake snake = arena.players.get(p.getName());
+            final Tail snake = arena.players.get(p.getName());
             if (snake!=null ) {
                 if (arena.state==GameState.ИГРА) {
                     if (i.getItemStack().getType() == Material.SUGAR) {

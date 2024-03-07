@@ -33,9 +33,9 @@ public class SnakeCmd implements CommandExecutor, TabCompleter {
             }
             case 2 -> {
                 //1-то,что вводится (обновляется после каждой буквы
-                for (Arena a : AM.arenas.values()) {
-                    sugg.add(a.arenaName);
-                }
+                //for (Arena a : AM.arenas.values()) {
+                    sugg.addAll(AM.arenas.keySet());
+                //}
             }
 
         }
@@ -147,17 +147,14 @@ public class SnakeCmd implements CommandExecutor, TabCompleter {
 
         } else {
 
-            if (AM.ArenaExist(args[1])) {
+            if (AM.getArena(args[1]) != null) {
                 cs.sendMessage("Арена с таким названием уже есть!");
                 return true;
             }
-            for ( Arena a : AM.arenas.values()) {
-                if (a.spawns.get(0).getWorld().getName().equals(p.getWorld().getName())) {
-                    cs.sendMessage("В этом мире уже есть арена!");
-                    return true;
-                }
+            if (AM.getArenaByWorld(p.getWorld().getName()) != null) {
+                cs.sendMessage("В этом мире уже есть арена!");
+                return true;
             }
-            
             if ( p.getWorld().getName().equals(Bukkit.getWorlds().get(0).getName())) {
                 cs.sendMessage("В этом мире нельзя добавить арену! Это глобальное лобби");
                 return true;
@@ -225,19 +222,14 @@ public class SnakeCmd implements CommandExecutor, TabCompleter {
             if ((args.length != 2 )) {
                 cs.sendMessage("§cInsufficiant Arguments! Proper use of the command goes like this: /ss stop <arena name>");
             } else {
-                if (AM.getArena(args[1]) == null) {
+                final Arena a = AM.getArena(args[1]);
+                if (a == null) {
                     cs.sendMessage("§cThat arena doesn\'t exist!");
                     return true;
                 }
 
-               // if ( !AM.getArena(astring[1]).hasStarted() ) {
-               //     commandsender.sendMessage("§cАрена не запущена!");
-              //      return true;
-             //   }
-
-                AM.stopArena(args[1], (Player) cs);
+                a.resetGame();
                 cs.sendMessage("§bArena Stopped");
-                cs.sendMessage("§cArena is not in game!");
             }
 
             return true;
