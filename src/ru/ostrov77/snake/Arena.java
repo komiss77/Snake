@@ -52,7 +52,7 @@ public class Arena implements IArena {
     public List<Location> spawns = new ArrayList();
     
     private RadioSongPlayer songPlayer;
-    private Random random = new Random();
+    private final Random random = new Random();
     
     private BukkitTask task, sheepTask;
 

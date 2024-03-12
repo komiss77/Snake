@@ -1,16 +1,20 @@
 package ru.ostrov77.snake;
 
+import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
+import org.bukkit.DyeColor;
 import org.bukkit.Effect;
+import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Sound;
+import org.bukkit.World;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Item;
 import org.bukkit.entity.Player;
+import org.bukkit.entity.Sheep;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
-import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.CreatureSpawnEvent;
@@ -19,21 +23,135 @@ import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityDismountEvent;
 import org.bukkit.event.entity.EntityPickupItemEvent;
 import org.bukkit.event.entity.ItemMergeEvent;
-import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.player.PlayerDropItemEvent;
-import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerSwapHandItemsEvent;
-import org.bukkit.inventory.EquipmentSlot;
+import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.util.Vector;
 import ru.komiss77.ApiOstrov;
 import ru.komiss77.Ostrov;
+import ru.komiss77.enums.Game;
 import ru.komiss77.enums.GameState;
+import ru.komiss77.events.FigureActivateEntityEvent;
+import ru.komiss77.events.FigureClickEvent;
+import ru.komiss77.modules.games.GM;
 import ru.komiss77.modules.player.Oplayer;
 import ru.komiss77.modules.player.PM;
+import ru.komiss77.modules.world.Cuboid;
+import ru.komiss77.utils.TCUtils;
 
 
 public class SnakeLst implements Listener {
+
+   
+    private static Sheep sh1, sh2;
+    private static Location loc1, loc2;
+    private static final Cuboid cuboid;
+    private static BukkitTask task;
+    private static World world;
+    
+    static {
+        cuboid = new Cuboid (3, 3, 3);
+    }
+    
+    @EventHandler ( priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onFigureActivateEntity (final FigureActivateEntityEvent e) {
+        if (e.getFigure().getTag().startsWith("snake")) {
+            if (e.getFigure().getTag().equals("snake1")) {
+                sh1 = (Sheep) e.getFigure().entity;
+                sh1.setNoDamageTicks(Integer.MAX_VALUE);
+                sh1.setAI(true);
+                sh1.setGravity(true);
+                loc1 = sh1.getLocation();
+                Bukkit.getMobGoals().removeAllGoals(sh1);
+                if (world == null) {
+                    cuboid.allign(e.getFigure().spawnLoc);
+                    world = sh1.getWorld();
+                }
+            } else if (e.getFigure().getTag().equals("snake2")) {
+                sh2 = (Sheep) e.getFigure().entity;
+                sh2.setNoDamageTicks(Integer.MAX_VALUE);
+                sh2.setAI(true);
+                sh2.setGravity(true);
+                loc2 = sh2.getLocation();
+                Bukkit.getMobGoals().removeAllGoals(sh1);
+                if (world == null) {
+                    cuboid.allign(e.getFigure().spawnLoc);
+                    world = sh2.getWorld();
+                }
+            }
+            
+            if (sh1 == null || sh2==null) return;
+            
+            if (!sh1.getLocation().getChunk().equals(sh2.getLocation().getChunk())) {
+                Ostrov.log_warn("Фигуры змейки в разных чанках!");
+                return;
+            }
+
+            if (task!=null) {
+                task.cancel();
+                task = null;
+            }
+            
+
+            task=new BukkitRunnable() {
+                int s=0;
+                boolean dir = true;
+                
+                @Override
+                public void run() {
+
+                    for (final Player p : world.getPlayers()) {
+                        if (cuboid.contains(p.getLocation())) {
+                            GM.randomPlay(p, Game.SN, Ostrov.MOT_D);
+                            //continue;
+                        }
+                    }
+
+                    if (sh1 == null || sh1.isDead() || !sh1.isValid()) {
+                        return;
+                    }
+                    
+                    if (sh2==null || sh2 == null || sh2.isDead() || !sh2.isValid()) {
+                        return;
+                    }
+                    
+                    if (s%5==0) {
+                        if (dir) {
+                            sh1.getPathfinder().moveTo(loc2);
+                            sh2.getPathfinder().moveTo(loc1);
+                        } else {
+                            sh1.getPathfinder().moveTo(loc1);
+                            sh2.getPathfinder().moveTo(loc2);
+                        }
+                        dir = !dir;
+                    }
+                    
+                    sh1.setColor(DyeColor.values()[Ostrov.random.nextInt(16)]);
+                    sh2.setColor(DyeColor.values()[Ostrov.random.nextInt(16)]);
+                    sh1.customName(Component.text(TCUtils.randomColor() + "ЗМЕЙКА"));
+                    sh1.customName(Component.text(TCUtils.randomColor() + "ЗМЕЙКА"));
+                    
+                   s++;
+
+                }
+            }.runTaskTimer(Ostrov.instance, 1, 11);
+                    
+        }
+    }
+
+    
+    @EventHandler ( priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onFigureClick (final FigureClickEvent e) {
+        if (e.getFigure().getTag().equals("snake1") || e.getFigure().getTag().equals("snake2")) {
+            e.getPlayer().sendMessage("§bПодходи ближе, поиграем!");
+        }
+    }     
+    
+
+
+
 
     
     @EventHandler (priority = EventPriority.MONITOR)
@@ -48,9 +166,7 @@ public class SnakeLst implements Listener {
     @EventHandler
     public void onHostileSpawn(CreatureSpawnEvent e) {
         final Arena a = AM.getArenaByWorld(e.getEntity().getWorld().getName());
-        if (a!=null //if ( !e.getLocation().getWorld().getName().equals(Bukkit.getServer().getWorlds().get(0).getName())
-                && e.getEntity().getType() != EntityType.SHEEP )
-            e.setCancelled(true);
+        if (a!=null && e.getEntity().getType() != EntityType.SHEEP ) e.setCancelled(true);
     }
 
     
@@ -92,6 +208,7 @@ public class SnakeLst implements Listener {
      
     @EventHandler
     public void Damage (EntityDamageEvent e) {
+        if (e.getEntityType() != EntityType.PLAYER) return;
         final Player p = (Player) e.getEntity();
         final Arena arena = AM.getArena(p);
         if (arena != null) {
@@ -119,15 +236,20 @@ public class SnakeLst implements Listener {
     }
 
      
-    @EventHandler
-    public void damm(EntityDamageByEntityEvent e) {
-        if (!e.getDamager().isOp()) {
-            e.setCancelled(true);
+    @EventHandler(priority = EventPriority.HIGH)
+    public void EntityDamageByEntityEvent(EntityDamageByEntityEvent e) {
+        if (e.getEntityType() == EntityType.PLAYER) {
+            Player p = (Player) e.getEntity();
+            final Arena arena = AM.getArena(p);
+            if (arena != null) {
+                e.setDamage(0);
+                e.setCancelled(true);
+            }
         }
     }
     
      
-    
+    /*
     @EventHandler( ignoreCancelled = true, priority = EventPriority.MONITOR)
     public void onInteract(final PlayerInteractEvent e) {
         if ( (e.getAction() == Action.RIGHT_CLICK_AIR || e.getAction() == Action.RIGHT_CLICK_BLOCK)
@@ -148,7 +270,7 @@ public class SnakeLst implements Listener {
                 }
             }
         }
-    }
+    }*/
 
     
     
@@ -216,11 +338,11 @@ public class SnakeLst implements Listener {
     }
 
     
-    @EventHandler
-    public void onPlayerDeath(PlayerDeathEvent pde) {
-       final Player p = pde.getEntity(); 
-       p.teleport (Bukkit.getWorlds().get(0).getSpawnLocation());
-    }   
+   // @EventHandler
+  //  public void onPlayerDeath(PlayerDeathEvent pde) {
+  //     final Player p = pde.getEntity(); 
+  ////     p.teleport (Bukkit.getWorlds().get(0).getSpawnLocation());
+  //  }   
     
         
     @EventHandler
