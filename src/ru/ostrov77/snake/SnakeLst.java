@@ -75,7 +75,7 @@ public class SnakeLst implements Listener {
                 sh2.setAI(true);
                 sh2.setGravity(true);
                 loc2 = sh2.getLocation();
-                Bukkit.getMobGoals().removeAllGoals(sh1);
+                Bukkit.getMobGoals().removeAllGoals(sh2);
                 if (world == null) {
                     cuboid.allign(e.getFigure().spawnLoc);
                     world = sh2.getWorld();
@@ -186,7 +186,7 @@ public class SnakeLst implements Listener {
             final Player p = (Player) e.getEntity();
             final Arena arena = AM.getArena(p);
 //Ostrov.log("p="+p+" arena="+arena);
-            if (arena != null) {
+            if (arena != null && arena.state!=GameState.ФИНИШ) {
                 e.setCancelled(true);
 //Ostrov.log("onDismount setCancelled!!!!");
             }
