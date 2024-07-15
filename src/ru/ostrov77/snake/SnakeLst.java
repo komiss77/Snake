@@ -1,5 +1,7 @@
 package ru.ostrov77.snake;
 
+import java.util.ArrayList;
+import java.util.List;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.DyeColor;
@@ -8,6 +10,7 @@ import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.World;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Item;
 import org.bukkit.entity.Player;
@@ -50,10 +53,13 @@ public class SnakeLst implements Listener {
     private static final Cuboid cuboid1, cuboid2;
     private static BukkitTask task;
     private static World world;
+    private static final List <Sheep> grow;
+    private static int y;
     
     static {
         cuboid1 = new Cuboid (3, 3, 3);
         cuboid2 = new Cuboid (3, 3, 3);
+        grow = new ArrayList<>();
     }
     
     @EventHandler ( priority = EventPriority.MONITOR, ignoreCancelled = true)
@@ -61,6 +67,7 @@ public class SnakeLst implements Listener {
         if (e.getFigure().getTag().startsWith("snake")) {
             if (e.getFigure().getTag().equals("snake1")) {
                 sh1 = (Sheep) e.getFigure().entity;
+                sh1.setCustomNameVisible(true);
                 //sh1.setNoDamageTicks(Integer.MAX_VALUE);
                 //sh1.setAI(true);
                 //sh1.setGravity(true);
@@ -68,10 +75,13 @@ public class SnakeLst implements Listener {
                 //Bukkit.getMobGoals().removeAllGoals(sh1);
                 if (world == null) {
                     world = sh1.getWorld();
+                    y = sh1.getLocation().getBlockY() + 2;
                 }
                 cuboid1.allign(e.getFigure().spawnLoc);
+                
             } else if (e.getFigure().getTag().equals("snake2")) {
                 sh2 = (Sheep) e.getFigure().entity;
+                sh2.setCustomNameVisible(true);
                 //sh2.setNoDamageTicks(Integer.MAX_VALUE);
                 //sh2.setAI(true);
                 //sh2.setGravity(true);
@@ -79,6 +89,7 @@ public class SnakeLst implements Listener {
                 //Bukkit.getMobGoals().removeAllGoals(sh2);
                 if (world == null) {
                     world = sh2.getWorld();
+                    y = sh2.getLocation().getBlockY() + 2;
                 }
                 cuboid2.allign(e.getFigure().spawnLoc);
             }
@@ -95,20 +106,91 @@ public class SnakeLst implements Listener {
                 task = null;
             }
             
+            for (Entity en : world.getEntities()) { //почистить мелких овечек - остаются после рестарта
+                if (en.getType() == EntityType.SHEEP && !((Sheep)en).isAdult()) {
+                    if (cuboid1.contains(en.getLocation()) || cuboid2.contains(en.getLocation())) {
+                        en.remove();
+                    }
+                }
+            }
 
             task=new BukkitRunnable() {
-                int s=0;
+                int t=0;
+                Sheep sheep;
                 //boolean dir = true;
                 
                 @Override
                 public void run() {
-                    for (final Player p : world.getPlayers()) {
-//Ostrov.log_warn("p="+p.getName()+" cuboid?"+cuboid.contains(p.getLocation()));
-                        if (cuboid1.contains(p.getLocation()) || cuboid2.contains(p.getLocation())) {
-                            GM.randomPlay(p, Game.SN, Ostrov.MOT_D);
-                            //continue;
+                    if (world.getPlayerCount() == 0) return;
+                    
+                    if (t%11==0) {
+                        for (final Player p : world.getPlayers()) {
+                            if (cuboid1.contains(p.getLocation()) || cuboid2.contains(p.getLocation())) {
+                                GM.randomPlay(p, Game.SN, Ostrov.MOT_D);
+                                //continue;
+                            }
                         }
-                    }
+
+
+                        sh1.setColor(DyeColor.values()[Ostrov.random.nextInt(16)]);
+                        sh2.setColor(DyeColor.values()[Ostrov.random.nextInt(16)]);
+                        sh1.customName(Component.text(TCUtils.randomColor() + "ЗМЕЙКА"));
+                        sh2.customName(Component.text(TCUtils.randomColor() + "ЗМЕЙКА"));
+
+                        if (!grow.isEmpty()) {
+                            for (int i = grow.size()-1; i>=0; i--) {
+                                sheep = grow.get(i);
+                                if (sheep.getTicksLived()>300) {
+                                    sheep.getWorld().playEffect(sheep.getLocation(), Effect.SMOKE, 1);
+                                    sheep.remove();
+                                    grow.remove(i);
+                                }
+                            }
+                        }
+
+                        while (grow.size()<5) {
+                            final Location loc = ApiOstrov.randBoolean() ? cuboid1.getRandomLocation(world) : cuboid2.getRandomLocation(world);
+    //Ostrov.log_warn("loc="+loc);
+                            loc.setY(y);
+                            final Sheep s = (Sheep) loc.getWorld().spawnEntity(loc, EntityType.SHEEP);
+                            s.setInvulnerable(true);
+                            s.setNoDamageTicks(Integer.MAX_VALUE);
+                            Bukkit.getMobGoals().removeAllGoals(s);
+                            s.setAI(false);
+                            s.setGlowing(false);
+                            s.setGravity(false);
+                            s.setBaby();
+                            s.setAgeLock(true);
+                            s.setTicksLived(1+Ostrov.random.nextInt(200)); //Age value (0) must be greater than 0
+                            s.setRotation( Ostrov.random.nextInt(360) - 180, Ostrov.random.nextInt(180) - 90);
+                            grow.add(s);
+                        }
+                    }  
+                    
+                    grow.stream().forEach( s -> {
+                        if (t%5==0) s.setColor(DyeColor.values()[Ostrov.random.nextInt(16)]);
+                        float yaw = s.getYaw();
+                        if (s.getPitch()>0) {
+                          yaw+=s.getTicksLived()/10;
+                          if (yaw>=360) {
+                            yaw = 0;
+                          }
+                        } else {
+                          yaw-=s.getTicksLived()/10;
+                          if (yaw<=-360) {
+                            yaw = 0;
+                          }
+                        }
+                        s.setRotation(yaw, s.getPitch() );
+                    });
+                    
+                   t++;
+
+                }
+            }.runTaskTimer(Ostrov.instance, 60, 1);
+                    
+        }
+    }
 
                     //if (sh1 == null || sh1.isDead() || !sh1.isValid()) {
                     //    return;
@@ -134,19 +216,6 @@ public class SnakeLst implements Listener {
                          //}
                     //}
                     
-                    sh1.setColor(DyeColor.values()[Ostrov.random.nextInt(16)]);
-                    sh2.setColor(DyeColor.values()[Ostrov.random.nextInt(16)]);
-                    sh1.customName(Component.text(TCUtils.randomColor() + "ЗМЕЙКА"));
-                    sh1.customName(Component.text(TCUtils.randomColor() + "ЗМЕЙКА"));
-                    
-                   s++;
-
-                }
-            }.runTaskTimer(Ostrov.instance, 1, 11);
-                    
-        }
-    }
-
     
     @EventHandler ( priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onFigureClick (final FigureClickEvent e) {
