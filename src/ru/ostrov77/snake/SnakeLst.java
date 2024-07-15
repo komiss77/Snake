@@ -46,13 +46,14 @@ public class SnakeLst implements Listener {
 
    
     private static Sheep sh1, sh2;
-    private static Location loc1, loc2;
-    private static final Cuboid cuboid;
+    //private static Location loc1, loc2;
+    private static final Cuboid cuboid1, cuboid2;
     private static BukkitTask task;
     private static World world;
     
     static {
-        cuboid = new Cuboid (3, 3, 3);
+        cuboid1 = new Cuboid (3, 3, 3);
+        cuboid2 = new Cuboid (3, 3, 3);
     }
     
     @EventHandler ( priority = EventPriority.MONITOR, ignoreCancelled = true)
@@ -60,34 +61,34 @@ public class SnakeLst implements Listener {
         if (e.getFigure().getTag().startsWith("snake")) {
             if (e.getFigure().getTag().equals("snake1")) {
                 sh1 = (Sheep) e.getFigure().entity;
-                sh1.setNoDamageTicks(Integer.MAX_VALUE);
-                sh1.setAI(true);
-                sh1.setGravity(true);
-                loc1 = sh1.getLocation();
-                Bukkit.getMobGoals().removeAllGoals(sh1);
+                //sh1.setNoDamageTicks(Integer.MAX_VALUE);
+                //sh1.setAI(true);
+                //sh1.setGravity(true);
+                //loc1 = sh1.getLocation().clone();
+                //Bukkit.getMobGoals().removeAllGoals(sh1);
                 if (world == null) {
-                    cuboid.allign(e.getFigure().spawnLoc);
                     world = sh1.getWorld();
                 }
+                cuboid1.allign(e.getFigure().spawnLoc);
             } else if (e.getFigure().getTag().equals("snake2")) {
                 sh2 = (Sheep) e.getFigure().entity;
-                sh2.setNoDamageTicks(Integer.MAX_VALUE);
-                sh2.setAI(true);
-                sh2.setGravity(true);
-                loc2 = sh2.getLocation();
-                Bukkit.getMobGoals().removeAllGoals(sh2);
+                //sh2.setNoDamageTicks(Integer.MAX_VALUE);
+                //sh2.setAI(true);
+                //sh2.setGravity(true);
+                //loc2 = sh2.getLocation().clone();
+                //Bukkit.getMobGoals().removeAllGoals(sh2);
                 if (world == null) {
-                    cuboid.allign(e.getFigure().spawnLoc);
                     world = sh2.getWorld();
                 }
+                cuboid2.allign(e.getFigure().spawnLoc);
             }
             
             if (sh1 == null || sh2==null) return;
             
-            if (!sh1.getLocation().getChunk().equals(sh2.getLocation().getChunk())) {
-                Ostrov.log_warn("Фигуры змейки в разных чанках!");
-                return;
-            }
+            //if (!sh1.getLocation().getChunk().equals(sh2.getLocation().getChunk())) {
+            //    Ostrov.log_warn("Фигуры змейки в разных чанках!");
+            //    return;
+            //}
 
             if (task!=null) {
                 task.cancel();
@@ -97,36 +98,41 @@ public class SnakeLst implements Listener {
 
             task=new BukkitRunnable() {
                 int s=0;
-                boolean dir = true;
+                //boolean dir = true;
                 
                 @Override
                 public void run() {
-
                     for (final Player p : world.getPlayers()) {
-                        if (cuboid.contains(p.getLocation())) {
+//Ostrov.log_warn("p="+p.getName()+" cuboid?"+cuboid.contains(p.getLocation()));
+                        if (cuboid1.contains(p.getLocation()) || cuboid2.contains(p.getLocation())) {
                             GM.randomPlay(p, Game.SN, Ostrov.MOT_D);
                             //continue;
                         }
                     }
 
-                    if (sh1 == null || sh1.isDead() || !sh1.isValid()) {
-                        return;
-                    }
+                    //if (sh1 == null || sh1.isDead() || !sh1.isValid()) {
+                    //    return;
+                    //}
                     
-                    if (sh2==null || sh2 == null || sh2.isDead() || !sh2.isValid()) {
-                        return;
-                    }
+                    //if (sh2==null || sh2 == null || sh2.isDead() || !sh2.isValid()) {
+                    //    return;
+                    //}
                     
-                    if (s%5==0) {
-                        if (dir) {
-                            sh1.getPathfinder().moveTo(loc2);
-                            sh2.getPathfinder().moveTo(loc1);
-                        } else {
-                            sh1.getPathfinder().moveTo(loc1);
-                            sh2.getPathfinder().moveTo(loc2);
-                        }
-                        dir = !dir;
-                    }
+                    //if (s%5==0) {
+                        //if (!cuboid.contains(sh1.getLocation()) || !cuboid.contains(sh2.getLocation())) {
+                        //    sh1.teleport(loc1);
+                        //    sh2.teleport(loc2);
+                        //} else {
+                            //if (dir) {
+                                //sh1.getPathfinder().moveTo(loc2);
+                                //sh2.getPathfinder().moveTo(loc1);
+                            //} else {
+                                //sh1.getPathfinder().moveTo(loc1);
+                                //sh2.getPathfinder().moveTo(loc2);
+                            //}
+                            //dir = !dir;                        
+                         //}
+                    //}
                     
                     sh1.setColor(DyeColor.values()[Ostrov.random.nextInt(16)]);
                     sh2.setColor(DyeColor.values()[Ostrov.random.nextInt(16)]);
