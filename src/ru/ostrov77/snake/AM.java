@@ -9,22 +9,23 @@ import org.bukkit.entity.Player;
 import ru.komiss77.ApiOstrov;
 import ru.komiss77.enums.GameState;
 import ru.komiss77.objects.CaseInsensitiveMap;
-import ru.komiss77.utils.LocationUtil;
-import ru.komiss77.utils.OstrovConfig;
-import ru.komiss77.utils.OstrovConfigManager;
+import ru.komiss77.utils.LocUtil;
+import ru.komiss77.OConfig;
+import ru.komiss77.OConfigManager;
+import ru.komiss77.utils.StringUtil;
 import ru.ostrov77.minigames.MG;
 
 public class AM {
 
-    public static final OstrovConfigManager manager;
-    private static final OstrovConfig config;
+    public static final OConfigManager manager;
+    private static final OConfig config;
     public static final CaseInsensitiveMap<Arena> arenas;
     public static final CaseInsensitiveMap<Arena> arenaByWorld;
     public static final List<File> songs = new ArrayList<>();
     public static boolean save;
     
     static {
-        manager = new OstrovConfigManager(SN.getInstance());
+        manager = new OConfigManager(SN.getInstance());
         config = manager.getNewConfig("config.yml");
         arenas = new CaseInsensitiveMap();
         arenaByWorld = new CaseInsensitiveMap();
@@ -40,15 +41,15 @@ public class AM {
     
     public static void saveAll() {
         for ( Arena a : AM.arenas.values()) {
-            config.set( "arenas." + a.arenaName+ ".arenaLobby" , LocationUtil.toDirString(a.arenaLobby) );
-            config.set( "arenas." + a.arenaName+ ".boundsLow" , LocationUtil.toDirString(a.boundsLow) );
-            config.set( "arenas." + a.arenaName+ ".boundsHigh", LocationUtil.toDirString(a.boundsHigh) );
+            config.set( "arenas." + a.arenaName+ ".arenaLobby" , LocUtil.toDirString(a.arenaLobby) );
+            config.set( "arenas." + a.arenaName+ ".boundsLow" , LocUtil.toDirString(a.boundsLow) );
+            config.set( "arenas." + a.arenaName+ ".boundsHigh", LocUtil.toDirString(a.boundsHigh) );
 
             final List<String> list = new ArrayList<>();
             for (Location spawnpoint : a.spawns) {
-                list.add(LocationUtil.toDirString(spawnpoint));
+                list.add(LocUtil.toDirString(spawnpoint));
             }
-            config.set("arenas." + a.arenaName+ ".spawnPoints", ApiOstrov.toString(list, false));
+            config.set("arenas." + a.arenaName+ ".spawnPoints", StringUtil.toString(list, ","));
         }
         config.saveConfig();
         save = false;
@@ -63,15 +64,15 @@ public class AM {
                 
                 final List<Location> spawnPoints = new ArrayList<>();
                 for (String s : config.getString("arenas."+arenaName+".spawnPoints").split(",")) {
-                    spawnPoints.add(LocationUtil.stringToLoc(s, true, true));
+                    spawnPoints.add(LocUtil.stringToLoc(s, true, true));
                 }
                 
                 final Arena arena = new Arena(
                         spawnPoints, 
                         arenaName,
-                        LocationUtil.stringToLoc(config.getString("arenas."+arenaName+".arenaLobby"), false, true),
-                        LocationUtil.stringToLoc(config.getString("arenas."+arenaName+".boundsLow"), false, true),
-                        LocationUtil.stringToLoc(config.getString("arenas."+arenaName+".boundsHigh"), false, true)
+                        LocUtil.stringToLoc(config.getString("arenas."+arenaName+".arenaLobby"), false, true),
+                        LocUtil.stringToLoc(config.getString("arenas."+arenaName+".boundsLow"), false, true),
+                        LocUtil.stringToLoc(config.getString("arenas."+arenaName+".boundsHigh"), false, true)
                 );
                 
                 if (spawnPoints.isEmpty() || arena.arenaLobby==null || arena.boundsLow==null || arena.boundsHigh==null) {

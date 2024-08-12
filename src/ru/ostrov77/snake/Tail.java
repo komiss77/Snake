@@ -22,7 +22,7 @@ import org.bukkit.util.BoundingBox;
 import org.bukkit.util.Vector;
 import ru.komiss77.Ostrov;
 import ru.komiss77.enums.GameState;
-import ru.komiss77.utils.TCUtils;
+import ru.komiss77.utils.TCUtil;
 
 public class Tail implements Runnable {
 
@@ -307,7 +307,7 @@ public class Tail implements Runnable {
     }
 
     public String getChatColor() {
-        return color == null ? "§7" : TCUtils.toChat(color);
+        return color == null ? "§7" : TCUtil.toChat(color);
     }
 
 

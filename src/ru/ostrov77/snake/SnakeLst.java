@@ -42,7 +42,7 @@ import ru.komiss77.modules.games.GM;
 import ru.komiss77.modules.player.Oplayer;
 import ru.komiss77.modules.player.PM;
 import ru.komiss77.modules.world.Cuboid;
-import ru.komiss77.utils.TCUtils;
+import ru.komiss77.utils.TCUtil;
 
 
 public class SnakeLst implements Listener {
@@ -134,8 +134,8 @@ public class SnakeLst implements Listener {
 
                         sh1.setColor(DyeColor.values()[Ostrov.random.nextInt(16)]);
                         sh2.setColor(DyeColor.values()[Ostrov.random.nextInt(16)]);
-                        sh1.customName(Component.text(TCUtils.randomColor() + "ЗМЕЙКА"));
-                        sh2.customName(Component.text(TCUtils.randomColor() + "ЗМЕЙКА"));
+                        sh1.customName(Component.text(TCUtil.randomColor() + "ЗМЕЙКА"));
+                        sh2.customName(Component.text(TCUtil.randomColor() + "ЗМЕЙКА"));
 
                         if (!grow.isEmpty()) {
                             for (int i = grow.size()-1; i>=0; i--) {
@@ -340,8 +340,8 @@ public class SnakeLst implements Listener {
                     if (e.getHand()==EquipmentSlot.HAND) p.getInventory().getItemInMainHand().setType(Material.AIR);
                     else p.getInventory().getItemInOffHand().setType(Material.AIR);
                 } else {
-                    if (e.getHand()==EquipmentSlot.HAND) p.getInventory().getItemInMainHand().setAmount(e.getItem().getAmount()-1);
-                    else p.getInventory().getItemInOffHand().setAmount(e.getItem().getAmount()-1);
+                    if (e.getHand()==EquipmentSlot.HAND) p.getInventory().getItemInMainHand().amount(e.getItem().getAmount()-1);
+                    else p.getInventory().getItemInOffHand().amount(e.getItem().getAmount()-1);
                 }
             }
         }

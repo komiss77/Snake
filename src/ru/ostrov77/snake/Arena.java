@@ -35,10 +35,10 @@ import ru.komiss77.modules.games.GM;
 import ru.komiss77.modules.player.Oplayer;
 import ru.komiss77.modules.player.PM;
 import ru.komiss77.scoreboard.SideBar;
-import ru.komiss77.utils.DonatEffect;
-import ru.komiss77.utils.ItemUtils;
-import ru.komiss77.utils.LocationUtil;
-import ru.komiss77.utils.TCUtils;
+import ru.komiss77.utils.ParticleUtil;
+import ru.komiss77.utils.*;
+import ru.komiss77.utils.LocUtil;
+import ru.komiss77.utils.TCUtil;
 import ru.komiss77.version.Nms;
 import ru.ostrov77.minigames.IArena;
 import ru.ostrov77.minigames.MG;
@@ -172,7 +172,7 @@ public class Arena implements IArena {
             sn = players.get(p.getName());
             if (sn.color==null) {
                 for (int x = 0; x < 100; x++) {
-                    color = TCUtils.randomDyeColor();
+                    color = TCUtil.randomDyeColor();
                     if (!colors.contains(color)) {
                         colors.add(color);
                         sn.color = color;
@@ -209,7 +209,7 @@ public class Arena implements IArena {
                     for (Player p : getPlayers()) {
                         op = PM.getOplayer(p);
                         op.score.getSideBar().setTitle("§6До старта: §b"+prestart);
-                        ApiOstrov.sendActionBarDirect(p, "§aОвцы готовятся к забегу : §b" + prestart + " §aсек.!");
+                        ScreenUtil.sendActionBarDirect(p, "§aОвцы готовятся к забегу : §b" + prestart + " §aсек.!");
                     }
                     --prestart;
                 }
@@ -286,7 +286,7 @@ public class Arena implements IArena {
                 sb.add(name, players.get(name).getChatColor()+name+" §f0");
             }
             sb.build();
-            ApiOstrov.sendActionBarDirect(p, "§6ПОЕХАЛИ! §aПОЕХАЛИ! §bПОЕХАЛИ!");
+            ScreenUtil.sendActionBarDirect(p, "§6ПОЕХАЛИ! §aПОЕХАЛИ! §bПОЕХАЛИ!");
         }
         
         task = (new BukkitRunnable() {
@@ -336,7 +336,7 @@ public class Arena implements IArena {
         int sugar = 0;
         Item i;
         for (Entity e : arenaLobby.getWorld().getEntities()) {
-            if (e.getType()!=EntityType.DROPPED_ITEM) continue;
+            if (e.getType()!=EntityType.ITEM) continue;
             if (e.getTicksLived() > 300) {
                 e.remove();
             }
@@ -377,7 +377,7 @@ public class Arena implements IArena {
                 z = ApiOstrov.randInt(boundsLow.getBlockZ(), boundsHigh.getBlockZ());
             }
                    
-            if (LocationUtil.isFeetAllow(Nms.getFastMat(arenaLobby.getWorld(), x, y, z))
+            if (LocUtil.isFeetAllow(Nms.getFastMat(arenaLobby.getWorld(), x, y, z))
                     && Nms.getFastMat(arenaLobby.getWorld(), x, y+1, z) == Material.AIR
                     && Nms.getFastMat(arenaLobby.getWorld(), x, y+2, z) == Material.AIR
                     && Nms.getFastMat(arenaLobby.getWorld(), x, y+3, z) == Material.AIR
@@ -412,7 +412,7 @@ public class Arena implements IArena {
                 sn.stop(drop);
             }
             if (drop) {
-                ApiOstrov.sendTitle(winner, "§aВы победили!", "§fСобирайте монеты, это Ваша награда!", 5, 20, 5);
+                ScreenUtil.sendTitle(winner, "§aВы победили!", "§fСобирайте монеты, это Ваша награда!", 5, 20, 5);
                 winner.playSound(winner.getEyeLocation(), Sound.BLOCK_ANVIL_FALL, 1.0F, 1.0F);
             }
         }
@@ -436,7 +436,7 @@ public class Arena implements IArena {
                             winner.addPotionEffect(new PotionEffect(PotionEffectType.LEVITATION, 130, 0));
                         }
                         if (ending <= 5) {
-                            DonatEffect.spawnRandomFirework(winner.getEyeLocation());
+                            ParticleUtil.spawnRandomFirework(winner.getEyeLocation());
                         }
                         if (ending == 5) {
                             final Tail sn = players.get(winner.getName());
@@ -464,10 +464,10 @@ public class Arena implements IArena {
             //if (winner != null) {
 
                 //playerTracker.get(winner_name).cancel();
-               // ApiOstrov.sendTitle(winner, "§aВы победили!", "§fСобирайте золото, это Ваша награда!", 5, 20, 5);
+               // ScreenUtil.sendTitle(winner, "§aВы победили!", "§fСобирайте золото, это Ваша награда!", 5, 20, 5);
                 //winner.playSound(winner.getEyeLocation(), Sound.BLOCK_ANVIL_FALL, 1.0F, 1.0F);
                 //arenaLobby.getWorld().getPlayers().stream().forEach((p) -> {
-                //    p.sendMessage("§f§oПобедитель: " + TCUtils.toChat(getColor(winner_name)) + winner_name + " §f§o Выбил игроков: §b" + playerTracker.get(winner_name).kills + " §f§o!");
+                //    p.sendMessage("§f§oПобедитель: " + TCUtil.toChat(getColor(winner_name)) + winner_name + " §f§o Выбил игроков: §b" + playerTracker.get(winner_name).kills + " §f§o!");
                 //});
 
        //     } else {
@@ -491,7 +491,7 @@ public class Arena implements IArena {
             endGame(EndCause.CollideSolo);
         } else {
             MiniGamesLst.spectatorPrepare(who);
-            ApiOstrov.sendTitle(who, "", "§4Вы проиграли!");
+            ScreenUtil.sendTitle(who, "", "§4Вы проиграли!");
             who.teleport(who.getEyeLocation().add(0, 2, 0));
             ApiOstrov.addStat(who, Stat.SN_game);
             ApiOstrov.addStat(who, Stat.SN_loose);
@@ -528,8 +528,8 @@ public class Arena implements IArena {
                 MG.forceStart.giveForce(p);
             }
             MG.leaveArena.giveForce(p);//p.getInventory().setItem(8, UniversalListener.leaveArena.clone());
-            p.getInventory().setItem(7, ItemUtils.air);
-            p.getInventory().setItem(1, ItemUtils.air);
+            p.getInventory().setItem(7, ItemUtil.air);
+            p.getInventory().setItem(1, ItemUtil.air);
             PM.getOplayer(p).tabSuffix(" §5"+arenaName, p);
             sendArenaData();
         }
@@ -606,7 +606,7 @@ public class Arena implements IArena {
 */
     public void SendAB(final String text) {
         arenaLobby.getWorld().getPlayers().stream().forEach((p) -> {
-            ApiOstrov.sendActionBarDirect(p, text);
+            ScreenUtil.sendActionBarDirect(p, text);
         });
     }
 
@@ -618,7 +618,7 @@ public class Arena implements IArena {
 
     public void SendTitle(final String t, final String st) {
         arenaLobby.getWorld().getPlayers().stream().forEach((p) -> {
-            ApiOstrov.sendTitle(p, t, st, 5, 20, 5);
+            ScreenUtil.sendTitle(p, t, st, 5, 20, 5);
         });
     }
 
