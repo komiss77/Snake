@@ -6,7 +6,6 @@ import java.util.Arrays;
 import java.util.List;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
-import ru.komiss77.ApiOstrov;
 import ru.komiss77.enums.GameState;
 import ru.komiss77.objects.CaseInsensitiveMap;
 import ru.komiss77.utils.LocUtil;

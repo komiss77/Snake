@@ -111,10 +111,13 @@ public class SnakeCmd implements CommandExecutor, TabCompleter {
             } else if (args[0].equalsIgnoreCase("leave") ) {
                 
                 final Arena a = AM.getArena(p);
-                if (a!=null) {
+                if (a==null) {
+                    p.sendMessage("§5Вы не играете в змейку");
+                } else {
                     a.removePlayer(p);
+                    MG.lobbyJoin(p);
+                    p.sendMessage("§5Вы покинули арену "+a.arenaName);
                 }
-                MG.lobbyJoin(p);
                 
             } else if (args[0].equalsIgnoreCase("start")) {
 
@@ -138,7 +141,7 @@ public class SnakeCmd implements CommandExecutor, TabCompleter {
             
             
             
-     if ( !ApiOstrov.isLocalBuilder(cs, false)) return false; 
+     if ( !ApiOstrov.isLocalBuilder(cs, false)) return true; 
 
     if (args[0].equalsIgnoreCase("create")) {
 
